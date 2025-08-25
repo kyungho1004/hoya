@@ -1,54 +1,74 @@
 import streamlit as st
+import datetime
 
 st.set_page_config(page_title="피수치 자동 해석기", layout="centered")
 st.title("🔬 피수치 자동 해석기 by Hoya")
-st.write("혈액 수치를 입력하고 해석 결과 및 영양 가이드를 확인하세요.")
+st.write("입력한 수치에 따라 해석 결과와 식이 가이드를 제공합니다.")
 
-# 입력값 받기
-wbc = st.number_input("WBC (백혈구)", min_value=0.0, step=0.1)
-hb = st.number_input("Hb (헤모글로빈)", min_value=0.0, step=0.1)
-plt = st.number_input("혈소판 (PLT)", min_value=0.0, step=1.0)
-anc = st.number_input("ANC (호중구)", min_value=0.0, step=1.0)
-alb = st.number_input("Albumin (알부민)", min_value=0.0, step=0.1)
-k = st.number_input("K⁺ (칼륨)", min_value=0.0, step=0.1)
-na = st.number_input("Na⁺ (소디움)", min_value=0.0, step=0.1)
-ca = st.number_input("Ca²⁺ (칼슘)", min_value=0.0, step=0.1)
+nickname = st.text_input("👤 별명 (닉네임)", max_chars=20)
+category = st.selectbox("📂 해석 카테고리", ["항암 치료", "일반 해석", "투석 환자", "당뇨"])
 
-# 해석 결과 출력
-if st.button("해석하기"):
-    st.subheader("🧾 결과 요약")
+# 수치 입력을 문자열로 받아서 실제 입력된 항목만 추출
+def float_input(label):
+    val = st.text_input(label)
+    return float(val) if val.strip() else None
 
-    if anc < 500:
-        st.warning("⚠️ 호중구 수치 낮음 → 감염주의 필요")
-        st.info("🥗 음식 가이드: 생채소 금지, 익힌 음식 권장, 멸균/살균 식품 선호. 남은 음식은 2시간 이내 섭취, 껍질 있는 과일은 주치의 상담 후 결정.")
-    else:
-        st.success("✅ 호중구 수치 안정적")
+# 주요 수치 입력
+wbc = float_input("WBC (백혈구)")
+hb = float_input("Hb (적혈구)")
+plt = float_input("혈소판 (PLT)")
+anc = float_input("ANC (호중구)")
+ca = float_input("칼슘 (Ca²⁺)")
+na = float_input("나트륨 (Na⁺)")
+k = float_input("칼륨 (K⁺)")
+alb = float_input("알부민 (Albumin)")
+glu = float_input("혈당 (Glucose)")
+tp = float_input("총단백 (Total Protein)")
+ast = float_input("AST")
+alt = float_input("ALT")
+ldh = float_input("LDH")
+crp = float_input("CRP")
+cr = float_input("크레아티닌 (Cr)")
+tb = float_input("총 빌리루빈 (TB)")
+bun = float_input("BUN")
+bnp = float_input("BNP")
+ua = float_input("요산 (UA)")
 
-    if hb < 8:
-        st.warning("⚠️ 심한 빈혈 가능성")
-        st.info("🥗 추천 음식: 소고기, 시금치, 두부, 달걀 노른자, 렌틸콩")
+# 항암제 입력
+st.subheader("💊 항암제 복용")
+chemo_dict = {}
+chemo_list = ["6-MP", "MTX", "베사노이드", "아라씨(IV)", "아라씨(SC)", "아라씨(HDAC)",
+              "하이드록시우레아", "비크라빈", "도우노루비신", "이달루시신", "미토잔트론",
+              "사이클로포스파마이드", "에토포사이드", "토포테칸", "플루다라빈"]
+for drug in chemo_list:
+    val = st.text_input(f"{drug} 복용량 (정)")
+    chemo_dict[drug] = float(val) if val.strip() else None
 
-    if plt < 50:
-        st.warning("⚠️ 출혈 위험")
+# 이뇨제
+diuretic = st.checkbox("💧 이뇨제 복용 중")
 
-    if wbc > 11:
-        st.info("ℹ️ 백혈구 수치 상승 → 감염 또는 염증 가능성")
+if st.button("✅ 결과 해석하기"):
+    st.success("📊 수치를 기반으로 해석 결과를 생성했습니다.")
+    st.markdown("※ 결과는 참고용이며, 최종 판단은 주치의와 상의하세요.")
+    st.write("🔽 아래에서 보고서를 다운로드하세요.")
 
-    if alb < 3.5:
-        st.warning("⚠️ 알부민 수치 낮음 → 영양 상태 저하 가능")
-        st.info("🥗 추천 음식: 달걀, 연두부, 흰살 생선, 닭가슴살, 귀리죽")
+    report_lines = [f"# 피수치 해석 보고서 ({datetime.date.today()})", f"**닉네임**: {nickname}", f"**카테고리**: {category}", "---"]
+    if wbc is not None: report_lines.append(f"- WBC: {wbc}")
+    if hb is not None: report_lines.append(f"- Hb: {hb}")
+    if plt is not None: report_lines.append(f"- 혈소판: {plt}")
+    if anc is not None: report_lines.append(f"- 호중구: {anc}")
+    if alb is not None and alb < 3.5:
+        report_lines.append("  - ⛔ 알부민 수치 낮음 → 달걀, 연두부, 흰살생선 등 권장")
+    if k is not None and k < 3.5:
+        report_lines.append("  - ⛔ 칼륨 낮음 → 바나나, 감자, 오렌지 등 권장")
+    if hb is not None and hb < 9:
+        report_lines.append("  - ⛔ 빈혈 의심 → 소고기, 달걀 노른자, 렌틸콩 등 권장")
+    if anc is not None and anc < 500:
+        report_lines.append("  - ⛔ 호중구 감소 → 생야채 금지, 멸균식품 권장")
+    if diuretic:
+        report_lines.append("  - ⚠️ 이뇨제 복용 중 → 탈수/전해질 이상 주의")
 
-    if k < 3.5:
-        st.warning("⚠️ 저칼륨혈증 위험")
-        st.info("🥗 추천 음식: 바나나, 감자, 고구마, 호박죽, 오렌지")
+    report_lines.append("---\n🧾 제작: Hoya / GPT\n자문: Hoya / GPT")
+    full_report = "\n".join(report_lines)
 
-    if na < 135:
-        st.warning("⚠️ 저나트륨혈증 가능성")
-        st.info("🥗 추천 음식: 전해질 음료, 미역국, 바나나, 오트밀죽, 삶은 감자")
-
-    if ca < 8.5:
-        st.warning("⚠️ 저칼슘혈증 가능성")
-        st.info("🥗 추천 음식: 연어통조림, 두부, 케일, 브로콜리")
-
-st.caption("제작: Hoya / 자문: Hoya-GPT")
-
+    st.download_button("📥 보고서 다운로드 (.md)", data=full_report, file_name="report.md")
