@@ -141,7 +141,7 @@ if category == "항암 치료":
         inputs["na"]  = num_input("나트륨 Na (mEq/L)", key="na")
         inputs["k"]   = num_input("칼륨 K (mEq/L)", key="k")
         inputs["alb"] = num_input("알부민 Albumin (g/dL)", key="alb")
-        inputs["glu"] = num_input("Glucose (mg/dL)", key="glu")
+        inputs["glu"] = num_input("Glucose (혈당) (mg/dL)", key="glu")
         inputs["tp"]  = num_input("총단백 TP (g/dL)", key="tp")
     with cols[1]:
         inputs["ast"] = num_input("AST (IU/L)", key="ast")
