@@ -290,6 +290,87 @@ if st.button("🔎 해석하기"):
                 screen_lines.append(f"🌡️ 체온 {temp}°C → 미열")
                 report_lines.append(f"- **미열**: 증상 변화 시 보고")
 
+# =========================
+# 💊 항암제 선택/용량 입력 섹션
+# =========================
+st.subheader("💊 항암제 복용/투여 입력")
+
+drug_options = [
+    "6-MP (Mercaptopurine)",
+    "MTX (Methotrexate)",
+    "베사노이드 (ATRA)",
+    "Cytarabine (ARA-C) - 정맥(IV)",
+    "Cytarabine (ARA-C) - 피하(SC)",
+    "Cytarabine (ARA-C) - 고용량(HDAC)",
+    "Vincristine (비크라빈)",
+    "Daunorubicin (도우노루비신)",
+    "Idarubicin (이달루시빈)",
+    "Mitoxantrone (미토잔트론)",
+    "Cyclophosphamide (사이클로포스파마이드)",
+    "Etoposide (에토포사이드)",
+    "Topotecan (토포테칸)",
+    "Fludarabine (플루다라빈)",
+    "Hydroxyurea (하이드록시우레아)",
+    "G-CSF (그라신)"
+]
+
+selected_drugs = st.multiselect(
+    "현재 복용/투여 중인 항암제를 선택하세요",
+    drug_options
+)
+
+# 용량 입력 (필요한 경우만 노출)
+doses = {}
+
+if "6-MP (Mercaptopurine)" in selected_drugs:
+    doses["6-MP"] = st.number_input("6-MP 복용량 (정)", min_value=0.0, step=0.1)
+
+if "MTX (Methotrexate)" in selected_drugs:
+    doses["MTX"] = st.number_input("MTX 복용량 (정)", min_value=0.0, step=0.1)
+
+if "베사노이드 (ATRA)" in selected_drugs:
+    doses["ATRA"] = st.number_input("베사노이드 복용량 (정)", min_value=0.0, step=0.1)
+
+if "G-CSF (그라신)" in selected_drugs:
+    doses["G-CSF 주기"] = st.selectbox("G-CSF 투여 주기", ["미투여", "1회", "연속 2일", "연속 3일 이상"])
+
+# 요약 경고 출력
+st.subheader("📋 항암제 관련 요약 주의사항")
+if not selected_drugs:
+    st.caption("선택된 항암제가 없습니다.")
+else:
+    drug_warnings = {
+        "6-MP (Mercaptopurine)": "간 수치(AST/ALT) 상승 시 주의. 복통·구토 시 즉시 병원.",
+        "MTX (Methotrexate)": "구내염·간수치 상승·골수억제 주의. 탈수 시 독성↑ 가능.",
+        "베사노이드 (ATRA)": "피부 발진·구내염·설사 가능. 호흡곤란·발열 시 RA증후군 의심.",
+        "Cytarabine (ARA-C) - 정맥(IV)": "발열·골수억제 주의. 신경학적 증상 시 병원.",
+        "Cytarabine (ARA-C) - 피하(SC)": "주사부위 통증·발적 가능. 발열·출혈 시 즉시 병원.",
+        "Cytarabine (ARA-C) - 고용량(HDAC)": "신경독성·시야 흐림 가능. 고열·의식저하 시 즉시 병원.",
+        "Vincristine (비크라빈)": "저림·통증·변비 가능. 장폐색 의심 시 응급.",
+        "Daunorubicin (도우노루비신)": "심장독성 가능. 흉통·부종 시 즉시 병원.",
+        "Idarubicin (이달루시빈)": "심장독성/골수억제 주의. 고열·호흡곤란 시 즉시.",
+        "Mitoxantrone (미토잔트론)": "심장독성 가능. 피부·소변 청록색 변색 흔함.",
+        "Cyclophosphamide (사이클로포스파마이드)": "출혈성 방광염 주의. 수분섭취 중요.",
+        "Etoposide (에토포사이드)": "저혈압/과민반응 드묾. 어지럼·호흡곤란 시 즉시.",
+        "Topotecan (토포테칸)": "골수억제 심함. 발열·출혈 경향 주의.",
+        "Fludarabine (플루다라빈)": "면역억제 강함. 발열·호흡기 증상 시 즉시 병원.",
+        "Hydroxyurea (하이드록시우레아)": "골수억제/피부변화 가능. 상처치유 지연.",
+        "G-CSF (그라신)": "뼈통증 흔함. 발열반응 드물게. 백혈구 상승 시 주치의 상의."
+    }
+
+    for d in selected_drugs:
+        dose_note = ""
+        if d.startswith("6-MP") and "6-MP" in doses:
+            dose_note = f" (복용량: {doses['6-MP']}정)"
+        if d.startswith("MTX") and "MTX" in doses:
+            dose_note = f" (복용량: {doses['MTX']}정)"
+        if d.startswith("베사노이드") and "ATRA" in doses:
+            dose_note = f" (복용량: {doses['ATRA']}정)"
+        if d.startswith("G-CSF") and "G-CSF 주기" in doses:
+            dose_note = f" (주기: {doses['G-CSF 주기']})"
+
+        st.write(f"• **{d}**{dose_note} → {drug_warnings.get(d, '주의사항을 확인하세요.')}")
+
     # 결과 출력
     st.subheader("📌 요약 결과")
     if screen_lines:
