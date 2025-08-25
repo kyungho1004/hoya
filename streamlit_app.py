@@ -1,5 +1,4 @@
-# Update the Streamlit app so all numeric fields are direct text inputs.
-updated_code = r'''
+
 # -*- coding: utf-8 -*-
 import streamlit as st
 from datetime import datetime
@@ -352,8 +351,3 @@ st.markdown("""
 > ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
 > **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
 """)
-'''
-with open('/mnt/data/streamlit_app_integrated_text.py', 'w', encoding='utf-8') as f:
-    f.write(updated_code)
-
-'/mnt/data/streamlit_app_integrated_text.py'
