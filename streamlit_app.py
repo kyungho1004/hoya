@@ -1,4 +1,3 @@
-
 import streamlit as st
 import datetime, io, os
 
@@ -185,21 +184,14 @@ if st.button("🔎 해석하기"):
         report_lines.append(f"- **저칼슘혈증**: Ca {ca} mg/dL (근육경련/저림)")
         add_food(report_lines, "Ca_low", "칼슘 낮음 식단")
 
+    # ✅ ANC: 한 번만, 화면+보고서 모두 출력
     if exists(anc) and anc < 500:
         screen_lines.append(f"ANC {anc} → 심한 감염 위험")
         report_lines.append(f"- **심한 호중구감소증**: ANC {anc} /µL")
         report_lines.append("")
         report_lines.append(NEUTROPENIA_NOTICE)
         add_food(report_lines, "ANC_low", "ANC 낮음 권장 식단")
-  if exists(anc) and anc < 500:
-    screen_lines.append(f"ANC {anc} → 심한 감염 위험")
-    report_lines.append(f"- **심한 호중구감소증**: ANC {anc} /µL")
-    report_lines.append("")
-    report_lines.append(NEUTROPENIA_NOTICE)
-    add_food(report_lines, "ANC_low", "ANC 낮음 권장 식단")
-
-    # 화면 요약에도 같이 표시되게 추가
-    screen_lines.append("🥗 ANC 낮음 권장 식단: 익힌 채소, 멸균 우유, 죽, 통조림 과일, 멸균 주스")
+        screen_lines.append("🥗 ANC 낮음 권장 식단: 익힌 채소, 멸균 우유, 죽, 통조림 과일, 멸균 주스")
 
     report_lines.append("")
     report_lines.append(IRON_WARN)
