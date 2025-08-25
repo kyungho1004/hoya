@@ -1,8 +1,8 @@
 import streamlit as st
-import datetime, io, os
+import datetime, io, os, re
 
-st.set_page_config(page_title="피수치 자동 해석기 (v7: 카테고리 전면 수정)", layout="centered")
-st.title("🔬 피수치 자동 해석기")
+st.set_page_config(page_title="피수치 자동 해석기 (v8: 자유 입력)", layout="centered")
+st.title("🔬 피수치 자동 해석기 (자유 입력 버전)")
 st.caption("제작: Hoya/GPT · 자문: Hoya/GPT")
 st.write("※ 본 결과는 교육/보조 용도이며 **최종 승인 = 주치의** 입니다.")
 
@@ -15,6 +15,25 @@ st.sidebar.success(f"조회수: {st.session_state.views}")
 # ─────────────────────────────
 # 유틸
 # ─────────────────────────────
+def parse_float(s: str):
+    if s is None:
+        return None
+    s = s.strip()
+    if not s:
+        return None
+    # 숫자, 점, 콤마, 음수만 허용
+    s = re.sub(r"[^0-9,.-]", "", s)
+    # 천단위 콤마 제거
+    s = s.replace(",", "")
+    try:
+        return float(s)
+    except:
+        return None
+
+def num_input(label, key=None, placeholder="예: 12.5"):
+    val = st.text_input(label, key=key, placeholder=placeholder)
+    return parse_float(val)
+
 def exists(x, zero_ok=False):
     if zero_ok:
         return True
@@ -70,24 +89,24 @@ if nickname and st.sidebar.button("🚫 이 별명 보고서 파일 삭제"):
         st.sidebar.info("삭제할 파일이 없습니다.")
 
 # ─────────────────────────────
-# 입력 폼 (카테고리별)
+# 입력 폼 (텍스트 자유 입력)
 # ─────────────────────────────
-st.subheader("📊 입력")
+st.subheader("📊 입력 (숫자를 직접 타이핑하세요)")
 inputs = {}
 
 if category in ["항암 치료", "일반 해석"]:
     col1, col2 = st.columns(2)
     with col1:
-        inputs["wbc"] = st.number_input("WBC (x10³/µL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["hb"]  = st.number_input("혈색소 Hb (g/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["plt"] = st.number_input("혈소판 PLT (x10³/µL)", min_value=0.0, step=1.0, format="%.0f")
-        inputs["anc"] = st.number_input("ANC (/µL)", min_value=0.0, step=10.0, format="%.0f")
+        inputs["wbc"] = num_input("WBC (x10³/µL)", key="wbc", placeholder="예: 4.3")
+        inputs["hb"]  = num_input("혈색소 Hb (g/dL)", key="hb", placeholder="예: 9.8")
+        inputs["plt"] = num_input("혈소판 PLT (x10³/µL)", key="plt", placeholder="예: 120")
+        inputs["anc"] = num_input("ANC (/µL)", key="anc", placeholder="예: 450")
     with col2:
-        inputs["ca"]  = st.number_input("칼슘 Ca (mg/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["na"]  = st.number_input("나트륨 Na (mEq/L)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["k"]   = st.number_input("칼륨 K (mEq/L)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["alb"] = st.number_input("알부민 Albumin (g/dL)", min_value=0.0, step=0.1, format="%.1f")
-    inputs["temp"] = st.number_input("🌡️ 체온 (°C)", min_value=0.0, step=0.1, format="%.1f")
+        inputs["ca"]  = num_input("칼슘 Ca (mg/dL)", key="ca", placeholder="예: 8.1")
+        inputs["na"]  = num_input("나트륨 Na (mEq/L)", key="na", placeholder="예: 132")
+        inputs["k"]   = num_input("칼륨 K (mEq/L)", key="k", placeholder="예: 3.2")
+        inputs["alb"] = num_input("알부민 Albumin (g/dL)", key="alb", placeholder="예: 3.2")
+    inputs["temp"] = num_input("🌡️ 체온 (°C)", key="temp", placeholder="예: 38.2")
 
 if category == "항암 치료":
     st.markdown("**🟢 유지요법 (경구제)**")
@@ -97,8 +116,9 @@ if category == "항암 치료":
     for i, d in enumerate(maint_drugs):
         with mcols[i]:
             if st.checkbox(f"{d} 복용", key=f"maint_use_{d}"):
-                dose = st.number_input(f"{d} 알약 개수(소수 가능)", step=0.1, key=f"maint_dose_{d}")
-                inputs["maint"][d] = dose
+                dose = num_input(f"{d} 알약 개수(소수 가능)", key=f"maint_dose_{d}", placeholder="예: 1.5")
+                if exists(dose, zero_ok=True):
+                    inputs["maint"][d] = dose
 
     st.markdown("**🔴 항암제 투여중 (주사/강화요법 등)**")
     active_drugs = [
@@ -112,8 +132,8 @@ if category == "항암 치료":
         use = st.checkbox(f"{d} 투여", key=f"active_use_{d}")
         if use:
             if d.startswith("ARA-C"):
-                form = st.selectbox(f"아라씨 제형 선택", ["정맥(IV)", "피하(SC)", "고용량(HDAC)"], key="arac_form")
-                sched = st.text_input("용량/주기 (예: 100mg/m² q12h x 7d)", key="arac_s")
+                form = st.selectbox(f"아라씨 제형 선택", ["정맥(IV)", "피하(SC)", "고용량(HDAC)"], key=f"arac_form_{d}")
+                sched = st.text_input("용량/주기 (예: 100mg/m² q12h x 7d)", key=f"arac_s_{d}")
                 inputs["active"][d] = {"제형": form, "용량/주기": sched}
             else:
                 sched = st.text_input(f"{d} 용량/주기", key=f"active_s_{d}")
@@ -130,26 +150,26 @@ if category == "항암 치료":
 if category == "투석 환자":
     col1, col2 = st.columns(2)
     with col1:
-        inputs["k"]   = st.number_input("칼륨 K (mEq/L)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["na"]  = st.number_input("나트륨 Na (mEq/L)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["ca"]  = st.number_input("칼슘 Ca (mg/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["phos"]= st.number_input("인 Phosphorus (mg/dL)", min_value=0.0, step=0.1, format="%.1f")
+        inputs["k"]   = num_input("칼륨 K (mEq/L)", key="k_d", placeholder="예: 5.8")
+        inputs["na"]  = num_input("나트륨 Na (mEq/L)", key="na_d", placeholder="예: 136")
+        inputs["ca"]  = num_input("칼슘 Ca (mg/dL)", key="ca_d", placeholder="예: 8.9")
+        inputs["phos"]= num_input("인 Phosphorus (mg/dL)", key="phos", placeholder="예: 6.1")
     with col2:
-        inputs["bun"] = st.number_input("BUN (mg/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["cr"]  = st.number_input("Creatinine (mg/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["alb"] = st.number_input("알부민 Albumin (g/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["hb"]  = st.number_input("혈색소 Hb (g/dL)", min_value=0.0, step=0.1, format="%.1f")
-    inputs["fluid_gain"] = st.number_input("투석 간 체중 증가(kg)", min_value=0.0, step=0.1, format="%.1f")
+        inputs["bun"] = num_input("BUN (mg/dL)", key="bun", placeholder="예: 65")
+        inputs["cr"]  = num_input("Creatinine (mg/dL)", key="cr", placeholder="예: 9.2")
+        inputs["alb"] = num_input("알부민 Albumin (g/dL)", key="alb_d", placeholder="예: 3.6")
+        inputs["hb"]  = num_input("혈색소 Hb (g/dL)", key="hb_d", placeholder="예: 10.1")
+    inputs["fluid_gain"] = num_input("투석 간 체중 증가(kg)", key="fluid_gain", placeholder="예: 3.0")
 
 if category == "당뇨 환자":
     col1, col2 = st.columns(2)
     with col1:
-        inputs["fpg"]   = st.number_input("식전(공복) 혈당 FPG (mg/dL)", min_value=0.0, step=1.0, format="%.0f")
-        inputs["pp2"]   = st.number_input("식후 2시간 혈당 PP2 (mg/dL)", min_value=0.0, step=1.0, format="%.0f")
+        inputs["fpg"]   = num_input("식전(공복) 혈당 FPG (mg/dL)", key="fpg", placeholder="예: 115")
+        inputs["pp2"]   = num_input("식후 2시간 혈당 PP2 (mg/dL)", key="pp2", placeholder="예: 195")
     with col2:
-        inputs["hba1c"] = st.number_input("HbA1c (%)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["hb"]    = st.number_input("혈색소 Hb (g/dL)", min_value=0.0, step=0.1, format="%.1f")
-        inputs["alb"]   = st.number_input("알부민 Albumin (g/dL)", min_value=0.0, step=0.1, format="%.1f")
+        inputs["hba1c"] = num_input("HbA1c (%)", key="hba1c", placeholder="예: 7.2")
+        inputs["hb"]    = num_input("혈색소 Hb (g/dL)", key="hb_dm", placeholder="예: 12.8")
+        inputs["alb"]   = num_input("알부민 Albumin (g/dL)", key="alb_dm", placeholder="예: 3.4")
 
 # ─────────────────────────────
 # 해석 실행 (카테고리별)
