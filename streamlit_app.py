@@ -191,6 +191,15 @@ if st.button("🔎 해석하기"):
         report_lines.append("")
         report_lines.append(NEUTROPENIA_NOTICE)
         add_food(report_lines, "ANC_low", "ANC 낮음 권장 식단")
+  if exists(anc) and anc < 500:
+    screen_lines.append(f"ANC {anc} → 심한 감염 위험")
+    report_lines.append(f"- **심한 호중구감소증**: ANC {anc} /µL")
+    report_lines.append("")
+    report_lines.append(NEUTROPENIA_NOTICE)
+    add_food(report_lines, "ANC_low", "ANC 낮음 권장 식단")
+
+    # 화면 요약에도 같이 표시되게 추가
+    screen_lines.append("🥗 ANC 낮음 권장 식단: 익힌 채소, 멸균 우유, 죽, 통조림 과일, 멸균 주스")
 
     report_lines.append("")
     report_lines.append(IRON_WARN)
