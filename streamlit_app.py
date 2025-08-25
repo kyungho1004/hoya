@@ -291,10 +291,11 @@ if st.button("🔎 해석하기"):
                 report_lines.append(f"- **미열**: 증상 변화 시 보고")
 
 # =========================
-# 💊 항암제 선택/용량 입력 섹션
+# 💊 항암제 선택/용량 입력 섹션 (안정형)
 # =========================
 st.subheader("💊 항암제 복용/투여 입력")
 
+# 1) 선택 항목
 drug_options = [
     "6-MP (Mercaptopurine)",
     "MTX (Methotrexate)",
@@ -319,9 +320,8 @@ selected_drugs = st.multiselect(
     drug_options
 )
 
-# 용량 입력 (필요한 경우만 노출)
+# 2) 용량/주기 입력
 doses = {}
-
 if "6-MP (Mercaptopurine)" in selected_drugs:
     doses["6-MP"] = st.number_input("6-MP 복용량 (정)", min_value=0.0, step=0.1)
 
@@ -332,32 +332,33 @@ if "베사노이드 (ATRA)" in selected_drugs:
     doses["ATRA"] = st.number_input("베사노이드 복용량 (정)", min_value=0.0, step=0.1)
 
 if "G-CSF (그라신)" in selected_drugs:
-    doses["G-CSF 주기"] = st.selectbox("G-CSF 투여 주기", ["미투여", "1회", "연속 2일", "연속 3일 이상"])
+    doses["G-CSF"] = st.selectbox("G-CSF 투여 주기", ["미투여", "1회", "연속 2일", "연속 3일 이상"])
 
-# 요약 경고 출력
+# 3) 화면 요약 경고
 st.subheader("📋 항암제 관련 요약 주의사항")
+
+drug_warnings = {
+    "6-MP (Mercaptopurine)": "간 수치(AST/ALT) 상승 시 주의. 복통·구토 시 즉시 병원.",
+    "MTX (Methotrexate)": "구내염·간수치 상승·골수억제 주의. 탈수 시 독성↑ 가능.",
+    "베사노이드 (ATRA)": "피부 발진·구내염·설사 가능. 발열·호흡곤란 시 RA증후군 의심.",
+    "Cytarabine (ARA-C) - 정맥(IV)": "발열·골수억제 주의. 신경학적 증상 시 병원.",
+    "Cytarabine (ARA-C) - 피하(SC)": "주사부위 통증·발적 가능. 발열·출혈 시 즉시 병원.",
+    "Cytarabine (ARA-C) - 고용량(HDAC)": "신경독성·시야 흐림 가능. 고열·의식저하 시 즉시 병원.",
+    "Vincristine (비크라빈)": "저림·통증·변비 가능. 장폐색 의심 시 응급.",
+    "Daunorubicin (도우노루비신)": "심장독성 가능. 흉통·부종 시 즉시 병원.",
+    "Idarubicin (이달루시빈)": "심장독성/골수억제 주의. 고열·호흡곤란 시 즉시.",
+    "Mitoxantrone (미토잔트론)": "심장독성 가능. 피부·소변 청록색 변색 흔함.",
+    "Cyclophosphamide (사이클로포스파마이드)": "출혈성 방광염 주의. 수분섭취 중요.",
+    "Etoposide (에토포사이드)": "저혈압/과민반응 드묾. 어지럼·호흡곤란 시 즉시.",
+    "Topotecan (토포테칸)": "골수억제 심함. 발열·출혈 경향 주의.",
+    "Fludarabine (플루다라빈)": "면역억제 강함. 발열·호흡기 증상 시 즉시 병원.",
+    "Hydroxyurea (하이드록시우레아)": "골수억제/피부변화 가능. 상처치유 지연.",
+    "G-CSF (그라신)": "뼈통증 흔함. 발열반응 드물게. 백혈구 상승 시 주치의 상의."
+}
+
 if not selected_drugs:
     st.caption("선택된 항암제가 없습니다.")
 else:
-    drug_warnings = {
-        "6-MP (Mercaptopurine)": "간 수치(AST/ALT) 상승 시 주의. 복통·구토 시 즉시 병원.",
-        "MTX (Methotrexate)": "구내염·간수치 상승·골수억제 주의. 탈수 시 독성↑ 가능.",
-        "베사노이드 (ATRA)": "피부 발진·구내염·설사 가능. 호흡곤란·발열 시 RA증후군 의심.",
-        "Cytarabine (ARA-C) - 정맥(IV)": "발열·골수억제 주의. 신경학적 증상 시 병원.",
-        "Cytarabine (ARA-C) - 피하(SC)": "주사부위 통증·발적 가능. 발열·출혈 시 즉시 병원.",
-        "Cytarabine (ARA-C) - 고용량(HDAC)": "신경독성·시야 흐림 가능. 고열·의식저하 시 즉시 병원.",
-        "Vincristine (비크라빈)": "저림·통증·변비 가능. 장폐색 의심 시 응급.",
-        "Daunorubicin (도우노루비신)": "심장독성 가능. 흉통·부종 시 즉시 병원.",
-        "Idarubicin (이달루시빈)": "심장독성/골수억제 주의. 고열·호흡곤란 시 즉시.",
-        "Mitoxantrone (미토잔트론)": "심장독성 가능. 피부·소변 청록색 변색 흔함.",
-        "Cyclophosphamide (사이클로포스파마이드)": "출혈성 방광염 주의. 수분섭취 중요.",
-        "Etoposide (에토포사이드)": "저혈압/과민반응 드묾. 어지럼·호흡곤란 시 즉시.",
-        "Topotecan (토포테칸)": "골수억제 심함. 발열·출혈 경향 주의.",
-        "Fludarabine (플루다라빈)": "면역억제 강함. 발열·호흡기 증상 시 즉시 병원.",
-        "Hydroxyurea (하이드록시우레아)": "골수억제/피부변화 가능. 상처치유 지연.",
-        "G-CSF (그라신)": "뼈통증 흔함. 발열반응 드물게. 백혈구 상승 시 주치의 상의."
-    }
-
     for d in selected_drugs:
         dose_note = ""
         if d.startswith("6-MP") and "6-MP" in doses:
@@ -366,10 +367,55 @@ else:
             dose_note = f" (복용량: {doses['MTX']}정)"
         if d.startswith("베사노이드") and "ATRA" in doses:
             dose_note = f" (복용량: {doses['ATRA']}정)"
-        if d.startswith("G-CSF") and "G-CSF 주기" in doses:
-            dose_note = f" (주기: {doses['G-CSF 주기']})"
+        if d.startswith("G-CSF") and "G-CSF" in doses:
+            dose_note = f" (주기: {doses['G-CSF']})"
 
         st.write(f"• **{d}**{dose_note} → {drug_warnings.get(d, '주의사항을 확인하세요.')}")
+
+
+# 4) 보고서(.md) 출력용 추가
+report_detail = {
+    "6-MP (Mercaptopurine)": "- 간독성/골수억제/췌장염 가능. AST/ALT, WBC/PLT 추적 필요.",
+    "MTX (Methotrexate)": "- 구내염/간수치 상승/골수억제. 탈수 시 독성↑. 약물상호작용 주의.",
+    "베사노이드 (ATRA)": "- 피부 발진/구내염/설사. RA증후군(발열·호흡곤란·체중증가) 가능.",
+    "Cytarabine (ARA-C) - 정맥(IV)": "- 발열/골수억제. 복시·시야 흐림 등 신경학 증상 주의.",
+    "Cytarabine (ARA-C) - 피하(SC)": "- 주사부위 반응. 발열·출혈 시 즉시 병원.",
+    "Cytarabine (ARA-C) - 고용량(HDAC)": "- 신경독성·시야 이상 가능. 신경계 모니터링 필수.",
+    "Vincristine (비크라빈)": "- 말초신경병증/변비. 장폐색 의심 증상 교육.",
+    "Daunorubicin (도우노루비신)": "- 심독성(누적용량). 흉통·호흡곤란 시 즉시.",
+    "Idarubicin (이달루시빈)": "- 심독성/골수억제. 고열 시 패혈증 의심.",
+    "Mitoxantrone (미토잔트론)": "- 심독성. 체액·피부 청록색 변색 가능.",
+    "Cyclophosphamide (사이클로포스파마이드)": "- 출혈성 방광염 예방 위해 수분섭취/배뇨 모니터.",
+    "Etoposide (에토포사이드)": "- 저혈압/과민반응 드묾. 투여 중 모니터링.",
+    "Topotecan (토포테칸)": "- 강한 골수억제. 발열·출혈 위험.",
+    "Fludarabine (플루다라빈)": "- 면역억제 강함. 기회감염 주의.",
+    "Hydroxyurea (하이드록시우레아)": "- 골수억제/피부변화. 상처치유 지연.",
+    "G-CSF (그라신)": "- 뼈통증 흔함. 고열·호흡곤란 등 이상 시 보고."
+}
+
+if selected_drugs:
+    report_lines.append("\n### 💊 항암제 요약 및 주의사항")
+    summary_names = ", ".join([d.split(" (")[0] for d in selected_drugs])
+    report_lines.append(f"- **복용/투여 항목**: {summary_names}")
+
+    # 용량/주기 요약
+    dose_bits = []
+    if "6-MP" in doses:
+        dose_bits.append(f"6-MP {doses['6-MP']}정")
+    if "MTX" in doses:
+        dose_bits.append(f"MTX {doses['MTX']}정")
+    if "ATRA" in doses:
+        dose_bits.append(f"ATRA {doses['ATRA']}정")
+    if "G-CSF" in doses:
+        dose_bits.append(f"G-CSF {doses['G-CSF']}")
+    if dose_bits:
+        report_lines.append(f"- **용량/주기**: {', '.join(dose_bits)}")
+
+    # 상세 설명
+    for d in selected_drugs:
+        if d in report_detail:
+            report_lines.append(f"- **{d}**: {report_detail[d]}")
+
 
     # 결과 출력
     st.subheader("📌 요약 결과")
