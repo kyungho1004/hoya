@@ -1,4 +1,1 @@
-# 항암치료 환자를 위한 혈액검사 수치 해석기
-streamlit
-pandas
-matplotlib
+streamlit>=1.36
