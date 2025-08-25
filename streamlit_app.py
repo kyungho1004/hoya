@@ -1,21 +1,22 @@
 
 # -*- coding: utf-8 -*-
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
-st.set_page_config(page_title="피수치 자동 해석기 (통합본: 텍스트 입력)", layout="centered")
+st.set_page_config(page_title="피수치 자동 해석기 (통합본)", layout="centered")
 
-APP_VER = "v5.1-integrated-textinput"
+APP_VER = "v6.0-integrated"
 CREDIT = "제작: Hoya/GPT · 자문: Hoya/GPT"
 
-st.title("🔬 피수치 자동 해석기 (통합본: 숫자 직접 입력)")
+st.title("🔬 피수치 자동 해석기 (통합본)")
 st.caption(f"{CREDIT} | {APP_VER}")
 
-# ------------------------------
+# ============================================================
 # 유틸
-# ------------------------------
+# ============================================================
 def parse_number(s):
+    """텍스트에서 숫자만 파싱."""
     if s is None:
         return 0.0
     s = str(s).strip()
@@ -58,9 +59,12 @@ def warn_box(text):
 def info_box(text):
     st.info(text)
 
-# ------------------------------
+def success_box(text):
+    st.success(text)
+
+# ============================================================
 # 고정 가이드
-# ------------------------------
+# ============================================================
 FOOD_RECS = {
     "albumin_low": ["달걀", "연두부", "흰살 생선", "닭가슴살", "귀리죽"],
     "k_low": ["바나나", "감자", "호박죽", "고구마", "오렌지"],
@@ -94,23 +98,115 @@ DIURETIC_NOTE = (
     "💧 **이뇨제 병용 시 주의**: BUN/Cr 비, K/Na/Ca 전해질 이상 및 탈수 위험. 충분한 수분과 정기적 검사 필요."
 )
 
-# ------------------------------
+# ============================================================
 # 사이드바
-# ------------------------------
+# ============================================================
 category = st.sidebar.radio(
     "카테고리 선택",
-    ["일반 환자용", "항암제", "투석 환자", "당뇨"],
+    ["기본(일반)", "항암 환자용", "항암제", "투석 환자", "당뇨"],
     key="category_v5"
 )
 st.sidebar.text_input("별명(저장용)", key="nickname_v5")
 
-# ------------------------------
-# 일반 환자용
-# ------------------------------
-if category == "일반 환자용":
-    st.header("🩸 일반 환자용 해석 (숫자 직접 입력)")
+# ============================================================
+# 기본(일반) : WBC/Hb/PLT/ANC + 발열 + 교차 복용
+# ============================================================
+if category == "기본(일반)":
+    st.header("🩸 기본(일반)")
 
-    LABS = [
+    LABS_SIMPLE = [
+        ("WBC (백혈구)", "wbc"),
+        ("Hb (헤모글로빈)", "hb"),
+        ("혈소판 (PLT)", "plt"),
+        ("ANC (호중구)", "anc"),
+    ]
+
+    cols = st.columns(4)
+    for i, (label, slug) in enumerate(LABS_SIMPLE):
+        with cols[i % 4]:
+            text_num_input(label, key=f"lab_{slug}_v5", placeholder="예: 3.4 / 10.2 / 80")
+
+    fever_c = text_num_input("현재 체온(℃)", key="fever_temp_c_v5", placeholder="예: 38.3")
+
+    st.divider()
+    left, right = st.columns([1,1])
+
+    with left:
+        if st.button("해석하기", key="btn_general_simple_v5"):
+            md = []
+            add_line(md, f"# 간단 해석 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
+            add_line(md, CREDIT)
+
+            entered = {}
+            for _, slug in LABS_SIMPLE:
+                val = float(st.session_state.get(f"lab_{slug}_v5__val", 0) or 0)
+                if val != 0:
+                    entered[slug] = val
+            temp = float(st.session_state.get("fever_temp_c_v5__val", 0) or 0)
+
+            if entered:
+                add_line(md, "## 입력한 수치")
+                for k, v in entered.items():
+                    add_line(md, f"- **{k.upper()}**: {v}")
+            if temp:
+                add_line(md, f"- **체온**: {temp:.1f}℃")
+
+            add_line(md, "\n## 요약 해석")
+            anc = entered.get("anc")
+            if anc is not None and anc < 500:
+                st.warning("호중구 낮음(ANC<500): 감염위험 매우 높음 → 즉시 위생/조리 가이드 준수 & 병원 지침 따르기")
+                add_line(md, "ANC < 500: 감염위험 매우 높음 → 위생/조리 가이드 준수.")
+                add_line(md, NEUTROPENIA_COOKING)
+
+            if temp:
+                if temp >= 39.0:
+                    st.error("체온 39.0℃ 이상: **즉시 의료기관 방문 권장.**")
+                elif temp >= 38.5:
+                    st.warning("체온 38.5℃ 이상: **병원 연락 권장.**")
+                elif temp >= 38.0:
+                    st.info("체온 38.0~38.5℃: 해열제 복용 및 경과 관찰.")
+                add_line(md, FEVER_GUIDE)
+
+            st.success("✅ 간단 해석 완료.")
+            report = "\n".join(md)
+            st.download_button("📥 간단 보고서(.md) 다운로드", data=report,
+                               file_name="blood_simple_interpretation.md", mime="text/markdown")
+
+    with right:
+        if st.button("🕒 교차 복용 타임테이블(12h) 생성", key="btn_antipyretic_plan_v6"):
+            now = datetime.now().replace(second=0, microsecond=0)
+            plan = []
+            labels = ["아세트아미노펜", "이부프로펜"]
+            for i in range(5):  # 0h, 3h, 6h, 9h, 12h
+                t = now + timedelta(hours=3*i)
+                drug = labels[i % 2]
+                plan.append(f"- {t.strftime('%H:%M')} · **{drug}**")
+
+            st.subheader("교차 복용 12시간 예시")
+            for line in plan:
+                st.write(line)
+
+            st.info(
+                "💊 **성인(OTC) 일반 가이드**\n"
+                "- 아세트아미노펜: 500–1,000mg 1회, **최대 4,000mg/일** (간질환·음주 시 감량)\n"
+                "- 이부프로펜: 200–400mg 1회, **최대 1,200mg/일(OTC)**\n"
+                "\n👶 **소아(≥6개월)**\n"
+                "- 아세트아미노펜: **10–15 mg/kg** q4–6h\n"
+                "- 이부프로펜: **10 mg/kg** q6–8h (탈수·신장질환·위장관 출혈 위험 시 **피함**)\n"
+                "\n⚠️ **주의**: 기저질환·복용약·항암치료 중인 경우 반드시 **주치의 지침** 우선."
+            )
+
+    st.markdown("""
+> ℹ️ **팁**: 항암 치료/호중구 감소 중이라면, 이 화면 대신 좌측 **‘항암 환자용’** 또는 **‘항암제’** 카테고리를 사용하세요.
+""")
+
+# ============================================================
+# 항암 환자용 : 전체 수치 20개 + 발열 + 가이드
+# ============================================================
+elif category == "항암 환자용":
+    st.header("🧬 항암 환자용 해석")
+
+    LABS_FULL = [
         ("WBC (백혈구)", "wbc"),
         ("Hb (헤모글로빈)", "hb"),
         ("혈소판 (PLT)", "plt"),
@@ -133,63 +229,76 @@ if category == "일반 환자용":
     ]
 
     cols = st.columns(3)
-    for i, (label, slug) in enumerate(LABS):
+    for i, (label, slug) in enumerate(LABS_FULL):
         with cols[i % 3]:
-            text_num_input(label, key=f"lab_{slug}_v5", placeholder="예: 3.5 / 120 / 0.9")
+            text_num_input(label, key=f"hx_{slug}_v5", placeholder="예: 3.5")
+
+    fever_c = text_num_input("현재 체온(℃)", key="hx_fever_temp_c_v5", placeholder="예: 38.2")
 
     st.divider()
-    if st.button("해석하기", key="btn_general_v5"):
-        entered = {}
-        for _, slug in LABS:
-            key_val = f"lab_{slug}_v5__val"
-            val = float(st.session_state.get(key_val, 0) or 0)
-            if val != 0:
-                entered[slug] = val
-
+    if st.button("해석하기", key="btn_cancer_v5"):
         md = []
-        add_line(md, f"# 피수치 해석 결과 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
+        add_line(md, f"# 항암 환자 해석 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
         add_line(md, CREDIT)
 
-        if not entered:
-            st.info("입력된 수치가 없습니다. 0이 아닌 값만 해석에 사용합니다.")
-        else:
+        entered = {}
+        for _, slug in LABS_FULL:
+            val = float(st.session_state.get(f"hx_{slug}_v5__val", 0) or 0)
+            if val != 0:
+                entered[slug] = val
+        temp = float(st.session_state.get("hx_fever_temp_c_v5__val", 0) or 0)
+
+        if entered:
             section(md, "입력한 수치")
             for k, v in entered.items():
                 bullet(md, f"**{k.upper()}**: {v}")
+        if temp:
+            bullet(md, f"**체온**: {temp:.1f}℃")
 
-        # 요약 해석
         section(md, "요약 해석")
+
         anc = entered.get("anc")
         if anc is not None and anc < 500:
-            warn_box(NEUTROPENIA_COOKING)
-            bullet(md, "ANC < 500: 감염위험 매우 높음 → 위생/조리 가이드 준수.")
+            st.error("호중구 낮음(ANC<500): **감염위험 매우 높음** → 즉시 위생/조리 가이드 준수 & 병원 지침 따르기")
             add_line(md, NEUTROPENIA_COOKING)
 
         alb = entered.get("alb")
         if alb is not None and alb < 3.3:
-            bullet(md, f"알부민 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['albumin_low'])}")
-        k = entered.get("k")
-        if k is not None and k < 3.5:
-            bullet(md, f"칼륨 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['k_low'])}")
+            bullet(md, f"알부민 낮음 → 권장식품: {' · '.join(FOOD_RECS['albumin_low'])}")
+
         hb = entered.get("hb")
         if hb is not None and hb < 10:
-            bullet(md, f"Hb 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['hb_low'])}")
+            bullet(md, f"Hb 낮음 → 권장식품: {' · '.join(FOOD_RECS['hb_low'])}")
             add_line(md, IRON_WARNING)
-        na = entered.get("na")
-        if na is not None and na < 135:
-            bullet(md, f"나트륨 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['na_low'])}")
-        ca = entered.get("ca")
-        if ca is not None and ca < 8.6:
-            bullet(md, f"칼슘 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['ca_low'])}")
 
-        add_line(md, "\n---\n" + FEVER_GUIDE)
+        k_val = entered.get("k")
+        if k_val is not None and k_val < 3.5:
+            bullet(md, f"칼륨 낮음 → 권장식품: {' · '.join(FOOD_RECS['k_low'])}")
+        na_val = entered.get("na")
+        if na_val is not None and na_val < 135:
+            bullet(md, f"나트륨 낮음 → 권장식품: {' · '.join(FOOD_RECS['na_low'])}")
+        ca_val = entered.get("ca")
+        if ca_val is not None and ca_val < 8.6:
+            bullet(md, f"칼슘 낮음 → 권장식품: {' · '.join(FOOD_RECS['ca_low'])}")
+
+        # 발열 가이드
+        if temp:
+            if temp >= 39.0:
+                st.error("체온 39.0℃ 이상: **즉시 의료기관 방문 권장.**")
+            elif temp >= 38.5:
+                st.warning("체온 38.5℃ 이상: **병원 연락 권장.**")
+            elif temp >= 38.0:
+                st.info("체온 38.0~38.5℃: 해열제 복용 및 경과 관찰.")
+            add_line(md, FEVER_GUIDE)
+
+        st.success("✅ 항암 환자 해석 완료.")
         report = "\n".join(md)
-        st.success("✅ 해석 완료 (입력한 항목만 반영).")
-        st.download_button("📥 전체 보고서(.md) 다운로드", data=report, file_name="blood_interpretation.md", mime="text/markdown")
+        st.download_button("📥 항암 환자 보고서(.md) 다운로드", data=report,
+                           file_name="blood_cancer_interpretation.md", mime="text/markdown")
 
-# ------------------------------
-# 항암제
-# ------------------------------
+# ============================================================
+# 항암제 : 요약은 화면, 상세는 md
+# ============================================================
 elif category == "항암제":
     st.header("💊 항암제 해석 (숫자 직접 입력)")
     st.write("복용/투여 여부와 용량(정/회/㎎ 등)을 **숫자만** 입력하세요. (일반인은 알약 개수 단위 허용)")
@@ -257,9 +366,9 @@ elif category == "항암제":
         report = "\n".join(md)
         st.download_button("📥 항암제 상세 보고서(.md) 다운로드", data=report, file_name="chemo_interpretation.md", mime="text/markdown")
 
-# ------------------------------
+# ============================================================
 # 투석 환자
-# ------------------------------
+# ============================================================
 elif category == "투석 환자":
     st.header("🫁 투석 환자용 해석 (숫자 직접 입력)")
 
@@ -311,9 +420,9 @@ elif category == "투석 환자":
         report = "\n".join(md)
         st.download_button("📥 투석 보고서(.md) 다운로드", data=report, file_name="dialysis_interpretation.md", mime="text/markdown")
 
-# ------------------------------
+# ============================================================
 # 당뇨
-# ------------------------------
+# ============================================================
 elif category == "당뇨":
     st.header("🍚 당뇨 해석 (숫자 직접 입력)")
     fpg = text_num_input("식전 혈당 (mg/dL)", key="dm_fpg_v5", placeholder="예: 95")
@@ -344,10 +453,9 @@ elif category == "당뇨":
         report = "\n".join(md)
         st.download_button("📥 당뇨 보고서(.md) 다운로드", data=report, file_name="diabetes_interpretation.md", mime="text/markdown")
 
-# ------------------------------
+# ============================================================
 # 하단 면책
-# ------------------------------
+# ============================================================
 st.markdown("""
 > ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
 > **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
-""")
