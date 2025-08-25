@@ -289,54 +289,35 @@ if st.button("🔎 해석하기"):
             else:
                 screen_lines.append(f"🌡️ 체온 {temp}°C → 미열")
                 report_lines.append(f"- **미열**: 증상 변화 시 보고")
-
 # =========================
-# 💊 항암제 선택/용량 입력 섹션 (안정형)
+# 💊 항암제 선택/용량 입력 섹션 (안정형; 버튼 블록 안)
 # =========================
 st.subheader("💊 항암제 복용/투여 입력")
 
-# 1) 선택 항목
 drug_options = [
-    "6-MP (Mercaptopurine)",
-    "MTX (Methotrexate)",
-    "베사노이드 (ATRA)",
-    "Cytarabine (ARA-C) - 정맥(IV)",
-    "Cytarabine (ARA-C) - 피하(SC)",
-    "Cytarabine (ARA-C) - 고용량(HDAC)",
-    "Vincristine (비크라빈)",
-    "Daunorubicin (도우노루비신)",
-    "Idarubicin (이달루시빈)",
-    "Mitoxantrone (미토잔트론)",
-    "Cyclophosphamide (사이클로포스파마이드)",
-    "Etoposide (에토포사이드)",
-    "Topotecan (토포테칸)",
-    "Fludarabine (플루다라빈)",
-    "Hydroxyurea (하이드록시우레아)",
-    "G-CSF (그라신)"
+    "6-MP (Mercaptopurine)", "MTX (Methotrexate)", "베사노이드 (ATRA)",
+    "Cytarabine (ARA-C) - 정맥(IV)", "Cytarabine (ARA-C) - 피하(SC)", "Cytarabine (ARA-C) - 고용량(HDAC)",
+    "Vincristine (비크라빈)", "Daunorubicin (도우노루비신)", "Idarubicin (이달루시빈)",
+    "Mitoxantrone (미토잔트론)", "Cyclophosphamide (사이클로포스파마이드)",
+    "Etoposide (에토포사이드)", "Topotecan (토포테칸)", "Fludarabine (플루다라빈)",
+    "Hydroxyurea (하이드록시우레아)", "G-CSF (그라신)"
 ]
 
-selected_drugs = st.multiselect(
-    "현재 복용/투여 중인 항암제를 선택하세요",
-    drug_options
-)
+selected_drugs = st.multiselect("현재 복용/투여 중인 항암제를 선택하세요", drug_options)
 
-# 2) 용량/주기 입력
+# 용량/주기 입력 (선택된 것만 노출)
 doses = {}
 if "6-MP (Mercaptopurine)" in selected_drugs:
     doses["6-MP"] = st.number_input("6-MP 복용량 (정)", min_value=0.0, step=0.1)
-
 if "MTX (Methotrexate)" in selected_drugs:
     doses["MTX"] = st.number_input("MTX 복용량 (정)", min_value=0.0, step=0.1)
-
 if "베사노이드 (ATRA)" in selected_drugs:
     doses["ATRA"] = st.number_input("베사노이드 복용량 (정)", min_value=0.0, step=0.1)
-
 if "G-CSF (그라신)" in selected_drugs:
     doses["G-CSF"] = st.selectbox("G-CSF 투여 주기", ["미투여", "1회", "연속 2일", "연속 3일 이상"])
 
-# 3) 화면 요약 경고
+# 화면 요약 경고
 st.subheader("📋 항암제 관련 요약 주의사항")
-
 drug_warnings = {
     "6-MP (Mercaptopurine)": "간 수치(AST/ALT) 상승 시 주의. 복통·구토 시 즉시 병원.",
     "MTX (Methotrexate)": "구내염·간수치 상승·골수억제 주의. 탈수 시 독성↑ 가능.",
@@ -361,19 +342,13 @@ if not selected_drugs:
 else:
     for d in selected_drugs:
         dose_note = ""
-        if d.startswith("6-MP") and "6-MP" in doses:
-            dose_note = f" (복용량: {doses['6-MP']}정)"
-        if d.startswith("MTX") and "MTX" in doses:
-            dose_note = f" (복용량: {doses['MTX']}정)"
-        if d.startswith("베사노이드") and "ATRA" in doses:
-            dose_note = f" (복용량: {doses['ATRA']}정)"
-        if d.startswith("G-CSF") and "G-CSF" in doses:
-            dose_note = f" (주기: {doses['G-CSF']})"
-
+        if d.startswith("6-MP") and "6-MP" in doses: dose_note = f" (복용량: {doses['6-MP']}정)"
+        if d.startswith("MTX") and "MTX" in doses:   dose_note = f" (복용량: {doses['MTX']}정)"
+        if d.startswith("베사노이드") and "ATRA" in doses: dose_note = f" (복용량: {doses['ATRA']}정)"
+        if d.startswith("G-CSF") and "G-CSF" in doses:     dose_note = f" (주기: {doses['G-CSF']})"
         st.write(f"• **{d}**{dose_note} → {drug_warnings.get(d, '주의사항을 확인하세요.')}")
 
-
-# 4) 보고서(.md) 출력용 추가
+# 보고서(.md) 추가
 report_detail = {
     "6-MP (Mercaptopurine)": "- 간독성/골수억제/췌장염 가능. AST/ALT, WBC/PLT 추적 필요.",
     "MTX (Methotrexate)": "- 구내염/간수치 상승/골수억제. 탈수 시 독성↑. 약물상호작용 주의.",
@@ -398,24 +373,42 @@ if selected_drugs:
     summary_names = ", ".join([d.split(" (")[0] for d in selected_drugs])
     report_lines.append(f"- **복용/투여 항목**: {summary_names}")
 
-    # 용량/주기 요약
     dose_bits = []
-    if "6-MP" in doses:
-        dose_bits.append(f"6-MP {doses['6-MP']}정")
-    if "MTX" in doses:
-        dose_bits.append(f"MTX {doses['MTX']}정")
-    if "ATRA" in doses:
-        dose_bits.append(f"ATRA {doses['ATRA']}정")
-    if "G-CSF" in doses:
-        dose_bits.append(f"G-CSF {doses['G-CSF']}")
+    if "6-MP" in doses:   dose_bits.append(f"6-MP {doses['6-MP']}정")
+    if "MTX" in doses:    dose_bits.append(f"MTX {doses['MTX']}정")
+    if "ATRA" in doses:   dose_bits.append(f"ATRA {doses['ATRA']}정")
+    if "G-CSF" in doses:  dose_bits.append(f"G-CSF {doses['G-CSF']}")
     if dose_bits:
         report_lines.append(f"- **용량/주기**: {', '.join(dose_bits)}")
 
-    # 상세 설명
     for d in selected_drugs:
         if d in report_detail:
             report_lines.append(f"- **{d}**: {report_detail[d]}")
 
+# =========================
+# 📌 최종 결과 출력 + 저장/다운로드 (버튼 블록 안, 약 선택 여부와 무관)
+# =========================
+st.subheader("📌 요약 결과")
+if screen_lines:
+    for line in screen_lines:
+        st.write("• " + line)
+else:
+    st.info("표시할 요약이 없습니다.")
+
+if nickname:
+    md_text = "\n".join(report_lines)
+    with open(f"{nickname}_results.md", "a", encoding="utf-8") as f:
+        f.write(md_text)
+        f.write("\n\n---\n\n")
+    st.success(f"'{nickname}_results.md'에 결과가 저장되었습니다.")
+
+    md_bytes = io.BytesIO(md_text.encode("utf-8"))
+    st.download_button("📥 이번 결과 .md 다운로드", data=md_bytes, file_name=f"{nickname}_{today}.md", mime="text/markdown")
+
+    pdf_bytes = md_to_pdf_bytes(md_text)
+    st.download_button("🧾 PDF로 다운로드", data=pdf_bytes, file_name=f"{nickname}_{today}.pdf", mime="application/pdf")
+else:
+    st.warning("별명을 입력하면 결과를 저장/다운로드할 수 있습니다.")
 
     # 결과 출력
     st.subheader("📌 요약 결과")
