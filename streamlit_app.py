@@ -157,6 +157,23 @@ with st.sidebar.expander("📦 기록 내보내기/불러오기", expanded=False
         except Exception as e:
             st.error(f"불러오기 실패: {e}")
 
+# ---- DEBUG: show loaded history keys & sample ----
+with st.sidebar.expander("🔎 디버그(임시 표시: 업로드된 기록 확인)", expanded=True):
+    try:
+        nicknames = list(st.session_state["history"].keys())
+        st.write("저장된 별명 목록:", nicknames if nicknames else "(없음)")
+        # 미리보기: 각 별명의 마지막 1개 기록만 간단히 표시
+        preview = {}
+        for name, items in st.session_state["history"].items():
+            if isinstance(items, list) and items:
+                last = items[-1]
+                preview[name] = {"ts": last.get("ts"), "category": last.get("category"), "values_keys": list(last.get("values", {}).keys())}
+        st.write("미리보기(최근 1건):", preview if preview else "(없음)")
+    except Exception as e:
+        st.write("디버그 표시 중 오류:", e)
+# ---- /DEBUG ----
+
+
 # ============================================================
 # 사이드바 (순서: 항암 → 항암제 → 투석 → 당뇨 → 일반)
 # ============================================================
@@ -453,5 +470,6 @@ st.markdown("""
 > ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
 > **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
 """)
+
 
 
