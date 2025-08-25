@@ -4,9 +4,9 @@ import streamlit as st
 from datetime import datetime, timedelta
 import re, json, io, copy
 
-st.set_page_config(page_title="피수치 자동 해석기 (통합본+음식추천)", layout="centered")
+st.set_page_config(page_title="피수치 자동 해석기 (통합본+음식추천+ANC+인)", layout="centered")
 
-APP_VER = "v7.2-food"
+APP_VER = "v7.4-food-ANC-P"
 CREDIT = "제작: Hoya/GPT · 자문: Hoya/GPT"
 
 st.title("🔬 피수치 자동 해석기 (통합본)")
@@ -74,6 +74,31 @@ FOOD_RECS = {
     "hb_low": ["소고기", "시금치", "두부", "달걀 노른자", "렌틸콩"],
     "na_low": ["전해질 음료", "미역국", "바나나", "오트밀죽", "삶은 감자"],
     "ca_low": ["연어통조림", "두부", "케일", "브로콜리", "참깨 제외"],
+    "p_low": ["우유/요거트", "달걀", "생선", "닭고기", "두부·콩류"],  # 저인혈증 보충
+    # 고인혈증(투석) 회피 식품
+    "p_high_avoid": ["우유·치즈", "견과/씨앗", "콜라/가공음료(인산염 첨가)", "초콜릿", "가공육", "내장류", "통곡물·현미"]
+}
+
+# ANC 낮을 때: 회피/주의 음식 & 안전 조리
+ANC_FOOD_CAUTION = {
+    "avoid": [
+        "생고기·레어 스테이크·육회·회(생선회/초밥)",
+        "반숙/흰자 안 익은 달걀, 수란·수제 마요네즈",
+        "비살균(살균표시 없는) 우유/주스·치즈(연성치즈)",
+        "익히지 않은 해산물(굴, 조개, 훈제연어 등)",
+        "샐러드 바/뷔페 음식, 길거리 즉석식품",
+        "덜 씻은 생채소·과일 껍질, 새싹채소",
+        "덜 익힌 콩나물/숙주나물",
+        "유산균 발효식품(콤부차·발효음료) — 주치의 지침 우선"
+    ],
+    "safe": [
+        "완전히 익힌 고기/생선/달걀(노른자까지 익힘)",
+        "살균(멸균) 표시 우유·요구르트·주스",
+        "껍질 벗긴 과일, 충분히 씻고 데친 채소",
+        "막 조리해 뜨거운 음식(전자레인지 30초 이상 재가열)",
+        "개봉 직후 섭취하는 포장식품, 멸균팩 죽/우유",
+        "조리 후 2시간 내 섭취, 남은 음식 빠른 냉장 보관"
+    ]
 }
 
 FEVER_GUIDE = (
@@ -89,25 +114,27 @@ IRON_WARNING = (
     "- 철분제와 비타민C를 함께 복용하면 흡수가 촉진됩니다. **반드시 주치의와 상담 후** 복용 여부를 결정하세요."
 )
 
-NEUTROPENIA_COOKING = (
-    "🧼 **호중구 낮음(ANC<500) 위생/조리 가이드**\n"
-    "- 생채소 금지, 익힌 음식 또는 전자레인지 **30초 이상** 조리\n"
-    "- 멸균/살균식품 권장\n"
-    "- 조리 후 남은 음식은 **2시간 이후 섭취 비권장**\n"
-    "- 껍질 있는 과일은 **주치의와 상담 후** 섭취"
-)
-
-DIURETIC_NOTE = (
-    "💧 **이뇨제 병용 시 주의**: BUN/Cr 비, K/Na/Ca 전해질 이상 및 탈수 위험. 충분한 수분과 정기적 검사 필요."
-)
-
 def show_food_recs(title, items):
     """즉시 화면에 음식 추천 섹션 표시"""
     if not items:
         return
     st.subheader(f"🍽️ {title}")
     for t, foods in items:
-        st.write(f"- **{t}** → {', '.join(foods[:5])}")
+        st.write(f"- **{t}** → {', '.join(foods[:6])}")
+
+def show_anc_caution(anc_val):
+    """ANC 낮음일 때 주의/안전 식품 바로 표시"""
+    if anc_val is None or anc_val == 0:
+        return
+    if anc_val < 500:
+        st.subheader("🧼 ANC 낮음(＜500) 식품/조리 주의")
+        st.write("**피해야 할 것:** " + " · ".join(ANC_FOOD_CAUTION["avoid"]))
+        st.write("**안전하게 먹는 요령:** " + " · ".join(ANC_FOOD_CAUTION["safe"]))
+    elif anc_val < 1000:
+        st.subheader("🧼 ANC 낮음(500~999) 식품/조리 주의")
+        st.write("가능하면 아래 **주의사항을 지켜서 조리**해 주세요.")
+        st.write("**피해야 할 것:** " + " · ".join(ANC_FOOD_CAUTION["avoid"][:5]) + " 등")
+        st.write("**안전하게 먹는 요령:** " + " · ".join(ANC_FOOD_CAUTION["safe"]))
 
 # ============================================================
 # 안전한 기록 구조 보정
@@ -272,7 +299,7 @@ if category.startswith("항암 환자용"):
     st.header("🧬 항암 환자용 해석")
     LABS_FULL = [
         ("WBC (백혈구)", "wbc"), ("Hb (헤모글로빈)", "hb"), ("혈소판 (PLT)", "plt"),
-        ("ANC (호중구)", "anc"), ("Ca²⁺ (칼슘)", "ca"), ("Na⁺ (소디움)", "na"),
+        ("ANC (호중구)", "anc"), ("Ca²⁺ (칼슘)", "ca"), ("Phosphorus (P, 인)", "phos"), ("Na⁺ (소디움)", "na"),
         ("K⁺ (포타슘)", "k"), ("Albumin (알부민)", "alb"), ("Glucose (혈당)", "glu"),
         ("Total Protein", "tp"), ("AST", "ast"), ("ALT", "alt"), ("LDH", "ldh"),
         ("CRP", "crp"), ("Creatinine (Cr)", "cr"), ("Total Bilirubin (TB)", "tb"),
@@ -306,12 +333,14 @@ if category.startswith("항암 환자용"):
         anc = entered.get("anc")
         if anc is not None and anc < 500:
             st.error("호중구 낮음(ANC<500): 감염위험 매우 높음")
-            add_line(md, NEUTROPENIA_COOKING)
+        # ANC 식품/조리 주의 즉시 표시
+        show_anc_caution(anc if anc is not None else 0)
         alb = entered.get("alb")
         hb = entered.get("hb")
         k_val = entered.get("k")
         na_val = entered.get("na")
         ca_val = entered.get("ca")
+        p_val  = entered.get("phos")
         # 음식 추천 즉시 표시
         food_items = []
         if alb is not None and alb < 3.3:
@@ -330,14 +359,19 @@ if category.startswith("항암 환자용"):
         if ca_val is not None and ca_val < 8.6:
             food_items.append(("칼슘 낮음", FOOD_RECS["ca_low"]))
             bullet(md, f"칼슘 낮음 → 권장식품: {', '.join(FOOD_RECS['ca_low'])}")
+        # 인(Phosphorus): 항암 일반에서는 저인혈증 위주 안내
+        if p_val is not None and p_val < 2.5:
+            food_items.append(("인(P) 낮음", FOOD_RECS["p_low"]))
+            bullet(md, f"인(P) 낮음 → 권장식품: {', '.join(FOOD_RECS['p_low'])}")
         if food_items:
+            st.markdown("---")
             show_food_recs("맞춤 식단 제안", food_items)
         # 발열 가이드
         if temp:
             if temp >= 39.0: st.error("체온 39.0℃ 이상: 즉시 의료기관 방문 권장.")
             elif temp >= 38.5: st.warning("체온 38.5℃ 이상: 병원 연락 권장.")
             elif temp >= 38.0: st.info("체온 38.0~38.5℃: 해열제 복용 및 경과 관찰.")
-            add_line(md, FEVER_GUIDE)
+            st.info(FEVER_GUIDE)
         # 이전 기록 비교
         if nickname:
             prev = prev_record(nickname, "항암 환자용")
@@ -437,8 +471,8 @@ elif category.startswith("항암제"):
 elif category.startswith("투석 환자"):
     st.header("🫁 투석 환자 해석")
     text_num_input("하루 소변량(ml)", key="urine_ml_v7", placeholder="예: 500")
-    for label, slug in [("K⁺", "k"), ("Na⁺", "na"), ("Ca²⁺", "ca"), ("BUN", "bun"),
-                        ("Creatinine (Cr)", "cr"), ("UA", "ua"), ("Hb", "hb"), ("Albumin", "alb")]:
+    for label, slug in [("K⁺", "k"), ("Na⁺", "na"), ("Ca²⁺", "ca"), ("Phosphorus (P, 인)", "phos"),
+                        ("BUN", "bun"), ("Creatinine (Cr)", "cr"), ("UA", "ua"), ("Hb", "hb"), ("Albumin", "alb")]:
         text_num_input(label, key=f"dx_{slug}_v7")
     if st.button("해석하기", key="btn_dialysis_v7"):
         md = []
@@ -446,13 +480,22 @@ elif category.startswith("투석 환자"):
         add_line(md, CREDIT)
         urine = float(st.session_state.get("urine_ml_v7__val", 0) or 0)
         add_line(md, f"- 소변량: {int(urine)} ml/day")
-        # 음식 추천
-        food_items = []
-        k = float(st.session_state.get("dx_k_v7__val", 0) or 0)
-        na = float(st.session_state.get("dx_na_v7__val", 0) or 0)
-        ca = float(st.session_state.get("dx_ca_v7__val", 0) or 0)
+        # 수치들
+        k   = float(st.session_state.get("dx_k_v7__val", 0) or 0)
+        na  = float(st.session_state.get("dx_na_v7__val", 0) or 0)
+        ca  = float(st.session_state.get("dx_ca_v7__val", 0) or 0)
+        p   = float(st.session_state.get("dx_phos_v7__val", 0) or 0)
         alb = float(st.session_state.get("dx_alb_v7__val", 0) or 0)
         hb  = float(st.session_state.get("dx_hb_v7__val", 0) or 0)
+        # 경고/안내
+        if p and p > 5.5:
+            warn_box("인(P) 높음(>5.5 mg/dL): 고인혈증 — 인이 많은 식품 제한 및 인결합제 복용 여부는 주치의 지시에 따르세요.")
+            bullet(md, "P>5.5: 인 많은 음식 제한(치즈/우유, 견과/씨앗, 콜라·가공음료, 초콜릿, 가공육, 내장류, 통곡물 등)")
+        elif p and p < 3.0:
+            info_box("인(P) 낮음(<3.0 mg/dL): 단백질/인지원 식품 보강 필요할 수 있음(우유/달걀/생선/두부 등).")
+            bullet(md, "P<3.0: 저인혈증 — 영양 섭취 보강 여부 평가")
+        # 음식 추천
+        food_items = []
         if k and k < 3.5:
             food_items.append(("칼륨 낮음", FOOD_RECS["k_low"]))
         if na and na < 135:
@@ -463,7 +506,14 @@ elif category.startswith("투석 환자"):
             food_items.append(("알부민 낮음", FOOD_RECS["albumin_low"]))
         if hb and hb < 10:
             food_items.append(("Hb 낮음", FOOD_RECS["hb_low"]))
+        if p and p > 5.5:
+            # 회피 식품은 추천 섹션 대신 별도 안내
+            st.subheader("🍽️ 인(P) 높을 때 피해야 할 음식")
+            st.write(" · ".join(FOOD_RECS["p_high_avoid"]))
+        elif p and p < 3.0:
+            food_items.append(("인(P) 낮음", FOOD_RECS["p_low"]))
         if food_items:
+            st.markdown("---")
             show_food_recs("맞춤 식단 제안", food_items)
         report = "\n".join(md)
         st.download_button("📥 투석 보고서(.md)", data=report, file_name="dialysis_interpretation.md", mime="text/markdown")
@@ -483,7 +533,6 @@ elif category.startswith("당뇨"):
         if fpg: bullet(md, f"식전: {fpg}")
         if ppg: bullet(md, f"식후: {ppg}")
         if a1c: bullet(md, f"HbA1c: {a1c}%")
-        # 간단 식이 팁
         st.subheader("🍽️ 기본 식이 팁")
         st.write("- 정제 탄수화물 줄이고, 단백질/식이섬유 보강")
         st.write("- 물 충분히, 가당음료/야식 줄이기")
@@ -524,18 +573,20 @@ elif category.startswith("기본(일반)"):
         anc = entered.get("anc")
         if anc is not None and anc < 500:
             st.warning("호중구 낮음(ANC<500): 감염위험 ↑")
-            add_line(md, NEUTROPENIA_COOKING)
+        # ANC 식품/조리 주의 즉시 표시
+        show_anc_caution(anc if anc is not None else 0)
         if temp:
             if temp >= 39.0: st.error("체온 39.0℃ 이상: 즉시 내원")
             elif temp >= 38.5: st.warning("체온 38.5℃ 이상: 병원 연락")
             elif temp >= 38.0: st.info("체온 38.0~38.5℃: 해열제 복용 및 경과관찰")
-            add_line(md, FEVER_GUIDE)
-        # 음식 추천 (기본 카테고리는 Hb만 활용)
+            st.info(FEVER_GUIDE)
+        # 음식 추천 (기본 카테고리는 Hb만 활용 예시)
         food_items = []
         hb = entered.get("hb")
         if hb is not None and hb < 10:
             food_items.append(("Hb 낮음", FOOD_RECS["hb_low"]))
         if food_items:
+            st.markdown("---")
             show_food_recs("맞춤 식단 제안", food_items)
         # 비교
         if nickname:
@@ -555,8 +606,6 @@ elif category.startswith("기본(일반)"):
                     arrow = "⬆️" if dtemp > 0 else ("⬇️" if dtemp < 0 else "➡️")
                     bullet(md, f"체온: {temp:.1f}℃ ({arrow} {dtemp:+.1f}℃ vs {prev_vals.get('temp_c')})")
                 bullet(md, f"이전 기록 시각: {prev.get('ts')}")
-        report = "\n".join(md)
-        st.download_button("📥 일반 보고서(.md)", data=report, file_name="blood_simple_interpretation.md", mime="text/markdown")
 
 # ============================================================
 # 하단 면책
@@ -564,4 +613,3 @@ elif category.startswith("기본(일반)"):
 st.markdown("""
 > ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
 > **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
-""")
