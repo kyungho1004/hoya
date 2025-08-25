@@ -175,7 +175,7 @@ elif category == "당뇨 환자":
         inputs["fpg"]   = num_input("식전(공복) 혈당 FPG (mg/dL)", key="fpg")
         inputs["pp2"]   = num_input("식후 2시간 혈당 PP2 (mg/dL)", key="pp2")
     with col2:
-        inputs["hba1c"] = num_input("HbA1c (%)", key="hba1c")
+        inputs["hba1c"] = num_input("당화혈색소", key="hba1c")
         inputs["hb"]    = num_input("혈색소 Hb (g/dL)", key="hb_dm")
         inputs["alb"]   = num_input("알부민 Albumin (g/dL)", key="alb_dm")
 
