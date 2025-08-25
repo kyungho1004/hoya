@@ -351,8 +351,7 @@ elif category == "당뇨":
         report = "\n".join(md)
         st.download_button("📥 당뇨 보고서(.md) 다운로드", data=report, file_name="diabetes_interpretation.md", mime="text/markdown")
 
-# ------------------------------
-# 하단 공통 경고/면책
-# ------------------------------
 st.markdown("""
-> ⚠️ 이 도구는 교육/자가관리 보조용입니다. **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
+> ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
+> **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
+""")
