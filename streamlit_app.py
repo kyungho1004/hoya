@@ -136,7 +136,7 @@ if category == "항암 치료":
         inputs["wbc"] = num_input("WBC (백혈구) (x10³/µL)", key="wbc")
         inputs["hb"]  = num_input("Hb (적혈구)(g/dL)", key="hb")
         inputs["plt"] = num_input("PLT (혈소판) (x10³/µL)", key="plt")
-        inputs["anc"] = num_input("ANC (호중구) (/µL)", key="anc")
+        inputs["anc"] = num_input("ANC (호중구,면연력) (/µL)", key="anc")
         inputs["ca"]  = num_input("칼슘 Ca (mg/dL)", key="ca")
         inputs["na"]  = num_input("나트륨 Na (mEq/L)", key="na")
         inputs["k"]   = num_input("칼륨 K (mEq/L)", key="k")
@@ -187,7 +187,7 @@ elif category == "일반 해석":
         inputs["hb"]  = num_input("Hb 적혈구 (g/dL)", key="hb_g")
         inputs["plt"] = num_input("PLT 혈소판 (x10³/µL)", key="plt_g")
     with col2:
-        inputs["anc"] = num_input("ANC 호중구 (/µL)", key="anc_g")
+        inputs["anc"] = num_input("ANC 호중구(면연력) (/µL)", key="anc_g")
         inputs["crp"] = num_input("CRP 염증수치(mg/dL)", key="crp_g")
         inputs["temp"]= num_input("체온 (°C)", key="temp_g")
 
@@ -216,8 +216,8 @@ if st.button("🔎 해석하기"):
     }
 
     if category == "일반 해석":
-        wbc=inputs.get("wbc"); hb=inputs.get("hb"); plt=inputs.get("plt")
-        anc=inputs.get("anc"); crp=inputs.get("crp"); temp=inputs.get("temp")
+        wbc=inputs.get("wbc(백혈구)"); hb=inputs.get("hb(적혈구)"); plt=inputs.get("plt(혈소판)")
+        anc=inputs.get("anc(호중구,면연력)"); crp=inputs.get("crp(염증수치)"); temp=inputs.get("temp(발열)")
         report_lines.append("## 해석 (일반 환자)")
         if exists(wbc) and wbc < 4:
             screen_lines.append(f"WBC {wbc} → 백혈구 감소")
