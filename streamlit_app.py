@@ -147,10 +147,10 @@ if category == "항암 치료":
         inputs["ast"] = num_input("AST (IU/L)", key="ast")
         inputs["alt"] = num_input("ALT (IU/L)", key="alt")
         inputs["ldh"] = num_input("LDH (IU/L)", key="ldh")
-        inputs["crp"] = num_input("CRP (mg/dL)", key="crp")
-        inputs["cr"]  = num_input("Creatinine (mg/dL)", key="cr")
+        inputs["crp"] = num_input("CRP(염증수치) (mg/dL)", key="crp")
+        inputs["cr"]  = num_input("Creatinine(신장수치) (mg/dL)", key="cr")
         inputs["tb"]  = num_input("총빌리루빈(Total Bilirubin) (mg/dL)", key="tb")
-        inputs["bun"] = num_input("BUN (mg/dL)", key="bun")
+        inputs["bun"] = num_input("BUN(mg/dL)", key="bun")
         inputs["bnp"] = num_input("BNP (pg/mL)", key="bnp")
         inputs["ua"]  = num_input("요산 UA (mg/dL)", key="ua")
     inputs["temp"] = num_input("체온 (°C)", key="temp")
@@ -183,12 +183,12 @@ elif category == "일반 해석":
     st.markdown("**👤 일반 환자 입력 (기본 항목)**")
     col1, col2 = st.columns(2)
     with col1:
-        inputs["wbc"] = num_input("WBC (x10³/µL)", key="wbc_g")
-        inputs["hb"]  = num_input("Hb (g/dL)", key="hb_g")
-        inputs["plt"] = num_input("혈소판 PLT (x10³/µL)", key="plt_g")
+        inputs["wbc"] = num_input("WBC 백혈구 (x10³/µL)", key="wbc_g")
+        inputs["hb"]  = num_input("Hb 적혈구 (g/dL)", key="hb_g")
+        inputs["plt"] = num_input("PLT 혈소판 (x10³/µL)", key="plt_g")
     with col2:
-        inputs["anc"] = num_input("ANC (/µL)", key="anc_g")
-        inputs["crp"] = num_input("CRP (mg/dL)", key="crp_g")
+        inputs["anc"] = num_input("ANC 호중구 (/µL)", key="anc_g")
+        inputs["crp"] = num_input("CRP 염증수치(mg/dL)", key="crp_g")
         inputs["temp"]= num_input("체온 (°C)", key="temp_g")
 
 # ─────────────────────────────
