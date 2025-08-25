@@ -144,9 +144,9 @@ if category == "항암 치료":
         inputs["glu"] = num_input("Glucose (혈당) (mg/dL)", key="glu")
         inputs["tp"]  = num_input("총단백 TP (g/dL)", key="tp")
     with cols[1]:
-        inputs["ast"] = num_input("AST (IU/L)", key="ast")
-        inputs["alt"] = num_input("ALT (IU/L)", key="alt")
-        inputs["ldh"] = num_input("LDH (IU/L)", key="ldh")
+        inputs["ast"] = num_input("AST(간수치) (IU/L)", key="ast")
+        inputs["alt"] = num_input("ALT(간세포 손상 수치) (IU/L)", key="alt")
+        inputs["ldh"] = num_input("LDH(세포 손상 수치) (IU/L)", key="ldh")
         inputs["crp"] = num_input("CRP(염증수치) (mg/dL)", key="crp")
         inputs["cr"]  = num_input("Creatinine(신장수치) (mg/dL)", key="cr")
         inputs["tb"]  = num_input("총빌리루빈(Total Bilirubin) (mg/dL)", key="tb")
