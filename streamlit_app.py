@@ -1,38 +1,48 @@
-
+# Update the Streamlit app so all numeric fields are direct text inputs.
+updated_code = r'''
 # -*- coding: utf-8 -*-
 import streamlit as st
 from datetime import datetime
+import re
 
-st.set_page_config(page_title="피수치 자동 해석기 (통합본)", layout="centered")
+st.set_page_config(page_title="피수치 자동 해석기 (통합본: 텍스트 입력)", layout="centered")
 
-APP_VER = "v5.0-integrated"
+APP_VER = "v5.1-integrated-textinput"
 CREDIT = "제작: Hoya/GPT · 자문: Hoya/GPT"
 
-st.title("🔬 피수치 자동 해석기 (통합본)")
+st.title("🔬 피수치 자동 해석기 (통합본: 숫자 직접 입력)")
 st.caption(f"{CREDIT} | {APP_VER}")
 
 # ------------------------------
-# 공통 유틸
+# 유틸
 # ------------------------------
-def num_input(label, key, min_value=0.0, step=0.1):
-    """Streamlit 위젯과 session_state를 안전하게 연결 (대입 금지, key만 사용)"""
-    if key not in st.session_state:
-        st.session_state[key] = 0.0
-    st.number_input(label, min_value=min_value, step=step, key=key)
-    return st.session_state[key]
-
-def get_entered(prefix):
-    """0이 아닌 값만 수집 (입력하지 않은 항목 제외)"""
-    data = {}
-    for k, v in st.session_state.items():
-        if k.startswith(prefix):
+def parse_number(s):
+    if s is None:
+        return 0.0
+    s = str(s).strip()
+    if s == "":
+        return 0.0
+    s = s.replace(",", "")
+    try:
+        return float(s)
+    except Exception:
+        m = re.search(r'-?\d+(?:\.\d+)?', s)
+        if m:
             try:
-                val = float(v)
+                return float(m.group(0))
             except Exception:
-                continue
-            if val != 0 and val is not None:
-                data[k] = val
-    return data
+                return 0.0
+        return 0.0
+
+def text_num_input(label, key, placeholder=""):
+    """텍스트로 숫자 직접 입력. 파싱된 값은 key+'__val'에 저장."""
+    if key not in st.session_state:
+        st.session_state[key] = ""
+    st.text_input(label, key=key, placeholder=placeholder)
+    raw = st.session_state.get(key, "")
+    val = parse_number(raw)
+    st.session_state[f"{key}__val"] = val
+    return val
 
 def add_line(md_lines, text):
     md_lines.append(text)
@@ -49,11 +59,8 @@ def warn_box(text):
 def info_box(text):
     st.info(text)
 
-def success_box(text):
-    st.success(text)
-
 # ------------------------------
-# 고정 가이드 (영양/주의)
+# 고정 가이드
 # ------------------------------
 FOOD_RECS = {
     "albumin_low": ["달걀", "연두부", "흰살 생선", "닭가슴살", "귀리죽"],
@@ -89,7 +96,7 @@ DIURETIC_NOTE = (
 )
 
 # ------------------------------
-# 사이드바 (카테고리/공통)
+# 사이드바
 # ------------------------------
 category = st.sidebar.radio(
     "카테고리 선택",
@@ -102,7 +109,7 @@ st.sidebar.text_input("별명(저장용)", key="nickname_v5")
 # 일반 환자용
 # ------------------------------
 if category == "일반 환자용":
-    st.header("🩸 일반 환자용 해석")
+    st.header("🩸 일반 환자용 해석 (숫자 직접 입력)")
 
     LABS = [
         ("WBC (백혈구)", "wbc"),
@@ -129,14 +136,14 @@ if category == "일반 환자용":
     cols = st.columns(3)
     for i, (label, slug) in enumerate(LABS):
         with cols[i % 3]:
-            num_input(label, key=f"lab_{slug}_v5")
+            text_num_input(label, key=f"lab_{slug}_v5", placeholder="예: 3.5 / 120 / 0.9")
 
     st.divider()
     if st.button("해석하기", key="btn_general_v5"):
         entered = {}
         for _, slug in LABS:
-            key = f"lab_{slug}_v5"
-            val = float(st.session_state.get(key, 0) or 0)
+            key_val = f"lab_{slug}_v5__val"
+            val = float(st.session_state.get(key_val, 0) or 0)
             if val != 0:
                 entered[slug] = val
 
@@ -151,20 +158,17 @@ if category == "일반 환자용":
             for k, v in entered.items():
                 bullet(md, f"**{k.upper()}**: {v}")
 
-        # 간단 해석 예시 (확장 가능)
+        # 요약 해석
         section(md, "요약 해석")
-        # ANC 경고
         anc = entered.get("anc")
         if anc is not None and anc < 500:
             warn_box(NEUTROPENIA_COOKING)
             bullet(md, "ANC < 500: 감염위험 매우 높음 → 위생/조리 가이드 준수.")
             add_line(md, NEUTROPENIA_COOKING)
 
-        # 기본 영양 가이드 샘플 (조건부)
         alb = entered.get("alb")
         if alb is not None and alb < 3.3:
-            food = " · ".join(FOOD_RECS["albumin_low"])
-            bullet(md, f"알부민 낮음 추정 → 권장식품: {food}")
+            bullet(md, f"알부민 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['albumin_low'])}")
         k = entered.get("k")
         if k is not None and k < 3.5:
             bullet(md, f"칼륨 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['k_low'])}")
@@ -180,7 +184,6 @@ if category == "일반 환자용":
             bullet(md, f"칼슘 낮음 추정 → 권장식품: {' · '.join(FOOD_RECS['ca_low'])}")
 
         add_line(md, "\n---\n" + FEVER_GUIDE)
-
         report = "\n".join(md)
         st.success("✅ 해석 완료 (입력한 항목만 반영).")
         st.download_button("📥 전체 보고서(.md) 다운로드", data=report, file_name="blood_interpretation.md", mime="text/markdown")
@@ -189,8 +192,8 @@ if category == "일반 환자용":
 # 항암제
 # ------------------------------
 elif category == "항암제":
-    st.header("💊 항암제 해석 (별도 카테고리)")
-    st.write("복용/투여 여부와 용량(정/회/㎎ 등)을 숫자로 입력하세요. (일반인은 알약 **개수** 단위 허용)")
+    st.header("💊 항암제 해석 (숫자 직접 입력)")
+    st.write("복용/투여 여부와 용량(정/회/㎎ 등)을 **숫자만** 입력하세요. (일반인은 알약 개수 단위 허용)")
 
     DRUGS = [
         ("6-MP", "6mp"),
@@ -200,7 +203,6 @@ elif category == "항암제":
         ("ARA-C (피하 SC)", "arac_sc"),
         ("ARA-C (고용량 HDAC)", "arac_hdac"),
         ("그라신 (G-CSF)", "gcsf"),
-        # 추가 9종 (요약은 화면, 상세는 md)
         ("하이드록시우레아", "hydroxyurea"),
         ("비크라빈", "vcrabine"),
         ("도우노루비신", "daunorubicin"),
@@ -215,7 +217,7 @@ elif category == "항암제":
     cols = st.columns(2)
     for i, (label, slug) in enumerate(DRUGS):
         with cols[i % 2]:
-            num_input(f"{label} (용량/개수)", key=f"dose_{slug}_v5")
+            text_num_input(f"{label} (용량/개수)", key=f"dose_{slug}_v5", placeholder="예: 1 / 2.5 / 50")
 
     st.checkbox("최근 이뇨제 사용", key="flag_diuretic_v5")
 
@@ -224,29 +226,24 @@ elif category == "항암제":
         add_line(md, f"# 항암제 해석 결과 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
         add_line(md, CREDIT)
 
-        # 화면 요약
         used_any = False
         for _, slug in DRUGS:
-            v = float(st.session_state.get(f"dose_{slug}_v5", 0) or 0)
+            v = float(st.session_state.get(f"dose_{slug}_v5__val", 0) or 0)
             if v != 0:
                 used_any = True
                 st.write(f"• **{slug.upper()}**: {v}")
-
         if not used_any:
             st.info("입력된 항암제 용량이 없습니다. 0이 아닌 값만 반영합니다.")
 
-        # 개별 경고 (화면)
-        if float(st.session_state.get("dose_vesa_v5", 0) or 0) > 0:
+        if float(st.session_state.get("dose_vesa_v5__val", 0) or 0) > 0:
             warn_box("베사노이드: 피부/점막 증상, 광과민, **설사** 가능. 증상 지속/악화 시 주치의와 상의.")
-        if float(st.session_state.get("dose_arac_hdac_v5", 0) or 0) > 0:
+        if float(st.session_state.get("dose_arac_hdac_v5__val", 0) or 0) > 0:
             warn_box("HDAC: 신경독성/소뇌 증상, 점막염↑, 간/신장 모니터링 필요.")
-        if float(st.session_state.get("dose_gcsf_v5", 0) or 0) > 0:
+        if float(st.session_state.get("dose_gcsf_v5__val", 0) or 0) > 0:
             warn_box("G-CSF: 골통/발열 반응 가능. 38.5℃ 이상 연락, 39℃ 이상 즉시 내원.")
-
         if st.session_state.get("flag_diuretic_v5", False):
             info_box(DIURETIC_NOTE)
 
-        # 상세 보고서 (md) - 화면은 요약만, 자세한 설명은 다운로드 전용
         section(md, "상세 부작용/주의사항 (요약)")
         bullet(md, "베사노이드: 피부/점막 자극, 광과민, **설사** 가능.")
         bullet(md, "ARA-C IV/SC/HDAC: 골수억제, 점막염, **HDAC는 신경독성 주의**.")
@@ -265,10 +262,9 @@ elif category == "항암제":
 # 투석 환자
 # ------------------------------
 elif category == "투석 환자":
-    st.header("🫁 투석 환자용 해석")
+    st.header("🫁 투석 환자용 해석 (숫자 직접 입력)")
 
-    num_input("하루 소변량(ml)", key="urine_ml_v5", min_value=0.0, step=50.0)
-    # 핵심 전해질/노폐물만 간단 입력 (0이면 제외)
+    text_num_input("하루 소변량(ml)", key="urine_ml_v5", placeholder="예: 500")
     for label, slug in [
         ("K⁺ (포타슘)", "k"),
         ("Na⁺ (소디움)", "na"),
@@ -279,18 +275,17 @@ elif category == "투석 환자":
         ("Hb (헤모글로빈)", "hb"),
         ("Albumin (알부민)", "alb"),
     ]:
-        num_input(label, key=f"dx_{slug}_v5")
+        text_num_input(label, key=f"dx_{slug}_v5")
 
     if st.button("해석하기", key="btn_dialysis_v5"):
         md = []
         add_line(md, f"# 투석 환자 해석 ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
         add_line(md, CREDIT)
 
-        urine = float(st.session_state.get("urine_ml_v5", 0) or 0)
+        urine = float(st.session_state.get("urine_ml_v5__val", 0) or 0)
         add_line(md, f"- 소변량: **{int(urine)} ml/day**")
 
-        # 간단 가이드
-        k = float(st.session_state.get("dx_k_v5", 0) or 0)
+        k = float(st.session_state.get("dx_k_v5__val", 0) or 0)
         if k != 0:
             if k > 5.5:
                 warn_box("칼륨 높음: 고칼륨 식품(바나나, 오렌지 주스 등) 제한, 즉시 식이 조절/평가 필요.")
@@ -299,17 +294,17 @@ elif category == "투석 환자":
                 info_box("칼륨 낮음: 과도한 제한 주의, 의료진과 보충 여부 상의.")
                 bullet(md, "K<3.5: 보충 고려, 원인 평가.")
 
-        na = float(st.session_state.get("dx_na_v5", 0) or 0)
+        na = float(st.session_state.get("dx_na_v5__val", 0) or 0)
         if na != 0 and na < 135:
             info_box("저나트륨: 수분 과다/희석성 저나트륨증 가능. 제한 수분량 점검.")
             bullet(md, "Na<135: 수분 제한/원인 탐색.")
 
-        bun = float(st.session_state.get("dx_bun_v5", 0) or 0)
-        cr = float(st.session_state.get("dx_cr_v5", 0) or 0)
+        bun = float(st.session_state.get("dx_bun_v5__val", 0) or 0)
+        cr = float(st.session_state.get("dx_cr_v5__val", 0) or 0)
         if bun != 0 or cr != 0:
             bullet(md, f"BUN/Cr: {bun}/{cr} (요독증 증상 여부 점검)")
 
-        alb = float(st.session_state.get("dx_alb_v5", 0) or 0)
+        alb = float(st.session_state.get("dx_alb_v5__val", 0) or 0)
         if alb != 0 and alb < 3.3:
             info_box("저알부민: 단백-에너지 영양불량 주의. 단백질 섭취/염분 조절 균형.")
             bullet(md, "Alb 낮음: 단백질 섭취 보강, 염분·수분 균형.")
@@ -321,10 +316,10 @@ elif category == "투석 환자":
 # 당뇨
 # ------------------------------
 elif category == "당뇨":
-    st.header("🍚 당뇨 해석")
-    fpg = num_input("식전 혈당 (mg/dL)", key="dm_fpg_v5", min_value=0.0, step=1.0)
-    ppg = num_input("식후 혈당 (mg/dL)", key="dm_ppg_v5", min_value=0.0, step=1.0)
-    a1c = num_input("HbA1c (%)", key="dm_hba1c_v5", min_value=0.0, step=0.1)
+    st.header("🍚 당뇨 해석 (숫자 직접 입력)")
+    fpg = text_num_input("식전 혈당 (mg/dL)", key="dm_fpg_v5", placeholder="예: 95")
+    ppg = text_num_input("식후 혈당 (mg/dL)", key="dm_ppg_v5", placeholder="예: 160")
+    a1c = text_num_input("HbA1c (%)", key="dm_hba1c_v5", placeholder="예: 6.3")
 
     if st.button("해석하기", key="btn_dm_v5"):
         md = []
@@ -344,14 +339,21 @@ elif category == "당뇨":
         else:
             st.info("입력된 수치가 없습니다.")
 
-        # 간단 식이 가이드
         info_box("저당 식이, 규칙적 운동, 수분 충분히. 저혈당 증상 시 즉시 섭취(포도당/주스 소량).")
         add_line(md, "- 기본: 저당 식이, 규칙 운동, 수분 보충.")
 
         report = "\n".join(md)
         st.download_button("📥 당뇨 보고서(.md) 다운로드", data=report, file_name="diabetes_interpretation.md", mime="text/markdown")
 
+# ------------------------------
+# 하단 면책
+# ------------------------------
 st.markdown("""
 > ⚠️ 이 도구는 교육/자가관리 보조용입니다.  
 > **최종 의사결정은 반드시 주치의가 승인**해야 합니다.
 """)
+'''
+with open('/mnt/data/streamlit_app_integrated_text.py', 'w', encoding='utf-8') as f:
+    f.write(updated_code)
+
+'/mnt/data/streamlit_app_integrated_text.py'
