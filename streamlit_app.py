@@ -193,3 +193,4 @@ else:
             st.line_chart(df.dropna(how="all"))
     else:
         st.info("아직 저장된 기록이 없습니다.")
+
