@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import streamlit as st
 
-# Try pandas for charts; app still runs without it (graphs disabled)
+# Optional pandas (for charts). App runs without it.
 try:
     import pandas as pd
     HAS_PD = True
@@ -74,18 +74,22 @@ FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 
 
 # ================== HELPERS ==================
 def parse_vals(s: str):
-    s = (s or "").strip()
+    # Normalize punctuation/newlines; **preserve empty entries**
+    s = (s or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n")
+    s = s.strip("\n ")  # keep internal blanks but trim edges
     if not s:
         return [None]*len(ORDER)
-    # 허용: 줄바꿈 / 쉼표 / 탭
-    if "\n" in s:
-        tokens = [x.strip() for x in s.splitlines() if x.strip()!=""]
+    # If comma list without newlines → comma mode (preserve empty among ,,)
+    if ("," in s) and ("\n" not in s):
+        tokens = [tok.strip() for tok in s.split(",")]
     else:
-        tokens = [x.strip() for x in s.replace("\t", ",").split(",")]
+        # Line mode: preserve empty lines to keep positions
+        tokens = [line.strip() for line in s.split("\n")]
     out = []
     for i in range(len(ORDER)):
+        tok = tokens[i] if i < len(tokens) else ""
         try:
-            out.append(float(tokens[i]) if i < len(tokens) and tokens[i] != "" else None)
+            out.append(float(tok) if tok != "" else None)
         except:
             out.append(None)
     return out
@@ -206,11 +210,11 @@ if run:
         st.markdown("### 🥗 음식 가이드")
         for f in fs: st.write("- " + f)
 
-    if category == "항암치료" and meds:
+    if category == "항암치료" and 'meds' in locals() and meds:
         st.markdown("### 💊 항암제 부작용·상호작용 요약")
         for line in summarize_meds(meds): st.write(line)
 
-    if category == "항생제" and extras.get("abx"):
+    if category == "항생제" and 'extras' in locals() and extras.get("abx"):
         st.markdown("### 🧪 항생제 주의 요약")
         for a in extras["abx"]: st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
 
@@ -233,7 +237,8 @@ if run:
             rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                    "category": category,
                    "labs": {k:v for k,v in labs.items() if entered(v)},
-                   "meds": meds, "extras": extras}
+                   "meds": locals().get("meds", {}),
+                   "extras": locals().get("extras", {})}
             st.session_state.records.setdefault(nickname, []).append(rec)
             st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
     else:
