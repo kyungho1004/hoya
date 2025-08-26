@@ -10,52 +10,111 @@ try:
 except Exception:
     HAS_PD = False
 
-# Export helpers (MD/TXT/PDF)
-try:
-    from report_exporter import render_download_buttons
-    HAS_EXPORTER = True
-except Exception:
-    HAS_EXPORTER = False
+# ================== INLINE EXPORTER (MD/TXT/PDF) ==================
+from io import BytesIO
+import re
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
+
+def markdown_to_text(md: str) -> str:
+    if md is None: return ""
+    text = md.replace("\r\n","\n").replace("\r","\n")
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"(\*\*|__)(.*?)\1", r"\2", text)
+    text = re.sub(r"(\*|_)(.*?)\1", r"\2", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
+    text = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", r"[Image: \1] (\2)", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return text.strip()
+
+def _register_korean_font(font_paths=None) -> str:
+    candidates = (font_paths or []) + [
+        "fonts/NanumGothic.ttf",
+        "fonts/NotoSansKR-Regular.otf",
+        "fonts/NotoSansKR-Regular.ttf",
+        "NanumGothic.ttf",
+        "NotoSansKR-Regular.otf",
+        "NotoSansKR-Regular.ttf",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                pdfmetrics.registerFont(TTFont("KoreanPrimary", p))
+                return "KoreanPrimary"
+            except Exception:
+                pass
+    return "Helvetica"
+
+def markdown_to_pdf_bytes(md: str, *, font_paths=None, title="Report") -> bytes:
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=15*mm, rightMargin=15*mm,
+                            topMargin=15*mm, bottomMargin=15*mm, title=title)
+    font_name = _register_korean_font(font_paths)
+
+    styles = getSampleStyleSheet()
+    for k in ("Normal","Title","Heading1","Heading2","Heading3"):
+        if k in styles: styles[k].fontName = font_name
+    body = ParagraphStyle("Body", parent=styles["Normal"], fontName=font_name, fontSize=10.5, leading=14, spaceAfter=4)
+    h1 = ParagraphStyle("H1", parent=styles["Heading1"], fontSize=16, leading=20, spaceAfter=8)
+    h2 = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=14, leading=18, spaceAfter=6)
+    h3 = ParagraphStyle("H3", parent=styles["Heading3"], fontSize=12, leading=16, spaceAfter=6)
+
+    story, bullet_block = [], []
+    def flush_bullets():
+        nonlocal bullet_block
+        if bullet_block:
+            items = [ListItem(Paragraph(re.sub(r"^\s*[-*]\s*", "", li).strip(), body)) for li in bullet_block]
+            story.append(ListFlowable(items, bulletType="bullet", start="•", leftIndent=10, spaceAfter=6))
+            bullet_block = []
+
+    for raw in md.replace("\r\n","\n").replace("\r","\n").split("\n"):
+        line = raw.rstrip()
+        if not line.strip():
+            flush_bullets(); story.append(Spacer(1,6)); continue
+        if line.startswith("### "): flush_bullets(); story.append(Paragraph(line[4:].strip(), h3)); continue
+        if line.startswith("## "):  flush_bullets(); story.append(Paragraph(line[3:].strip(), h2)); continue
+        if line.startswith("# "):   flush_bullets(); story.append(Paragraph(line[2:].strip(), h1)); continue
+        if re.match(r"^\s*[-*]\s+", line): bullet_block.append(line); continue
+        line_html = (line.replace("**","<b>").replace("__","<b>").replace("*","").replace("_","").replace("`",""))
+        story.append(Paragraph(line_html, body))
+    flush_bullets()
+    doc.build(story)
+    pdf = buffer.getvalue(); buffer.close(); return pdf
+
+def render_download_buttons_inline(report_md: str, base_filename: str = "report", *, font_paths=None, title="Report"):
+    if not report_md or not isinstance(report_md, str):
+        st.info("생성된 보고서가 없습니다. 먼저 해석 결과를 만들어주세요."); return
+    md_bytes = report_md.encode("utf-8")
+    txt_bytes = markdown_to_text(report_md).encode("utf-8")
+    pdf_bytes = markdown_to_pdf_bytes(report_md, font_paths=font_paths, title=title)
+    st.download_button("📝 보고서(.md) 다운로드", data=md_bytes, file_name=f"{base_filename}.md", mime="text/markdown", use_container_width=True)
+    st.download_button("📄 보고서(.txt) 다운로드", data=txt_bytes, file_name=f"{base_filename}.txt", mime="text/plain", use_container_width=True)
+    st.download_button("🧾 보고서(.pdf) 다운로드", data=pdf_bytes, file_name=f"{base_filename}.pdf", mime="application/pdf", use_container_width=True)
 
 # ================== APP CONFIG ==================
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기")
 st.markdown("👤 **제작: Hoya / 자문: Hoya·GPT**")
 
-# Session inits
 if "records" not in st.session_state:
-    st.session_state.records = {}   # dict[nickname] -> list[record]
+    st.session_state.records = {}
 if "last_report_md" not in st.session_state:
     st.session_state.last_report_md = ""
 
 # ================== CONSTANTS ==================
-# Final fixed order (2025-08-25)
-ORDER = [
-    "WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein",
-    "AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"
-]
-
+ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"]
 LABEL_MAP = {
-    "WBC":"WBC (백혈구)",
-    "Hb":"Hb (혈색소)",
-    "PLT":"PLT (혈소판)",
-    "ANC":"ANC (호중구)",
-    "Ca":"Ca (칼슘)",
-    "P":"P (인)",
-    "Na":"Na (소디움)",
-    "K":"K (포타슘)",
-    "Albumin":"Albumin (알부민)",
-    "Glucose":"Glucose (혈당)",
-    "Total Protein":"Total Protein (총단백)",
-    "AST":"AST",
-    "ALT":"ALT",
-    "LDH":"LDH",
-    "CRP":"CRP",
-    "Cr":"Creatinine (Cr)",
-    "UA":"Uric Acid (요산)",
-    "TB":"Total Bilirubin (TB)",
-    "BUN":"BUN",
-    "BNP":"BNP"
+    "WBC":"WBC (백혈구)","Hb":"Hb (혈색소)","PLT":"PLT (혈소판)","ANC":"ANC (호중구)","Ca":"Ca (칼슘)","P":"P (인)","Na":"Na (소디움)","K":"K (포타슘)",
+    "Albumin":"Albumin (알부민)","Glucose":"Glucose (혈당)","Total Protein":"Total Protein (총단백)","AST":"AST","ALT":"ALT","LDH":"LDH","CRP":"CRP",
+    "Cr":"Creatinine (Cr)","UA":"Uric Acid (요산)","TB":"Total Bilirubin (TB)","BUN":"BUN","BNP":"BNP"
 }
 
 ANTICANCER = {
@@ -99,8 +158,7 @@ IRON_WARN = "⚠️ 항암/백혈병 환자는 철분제 복용을 권장하지 
 
 # ================== HELPERS ==================
 def parse_vals(s: str):
-    s = (s or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n")
-    s = s.strip("\n ")
+    s = (s or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n").strip("\n ")
     if not s:
         return [None]*len(ORDER)
     if ("," in s) and ("\n" not in s):
@@ -165,7 +223,6 @@ def food_suggestions(l):
     return foods
 
 def sort_key_for_record(rec):
-    # Prefer test date; fallback to ts string
     d = rec.get("date")
     try:
         return datetime.fromisoformat(d)
@@ -234,6 +291,7 @@ elif category == "투석 환자":
     extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0)
     extras["hd_today"] = st.checkbox("오늘 투석 시행")
     extras["post_hd_weight_delta"] = st.number_input("투석 후 체중 변화 (kg)", min_value=-10.0, max_value=10.0, step=0.1)
+    extras["urine_salinity"] = st.number_input("소변 염도 (%)", min_value=0.0, step=0.1, help="가정용 염도계 값 (예: 0.2%)")
     if st.checkbox("이뇨제 복용 중", key="diuretic_on_dial"):
         extras["diuretic"] = True
 
@@ -253,17 +311,6 @@ if run:
     lines, labs = interpret_labs(vals)
 
     st.subheader("📋 해석 결과")
-    # 소변 염도 해석
-    if extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
-        percent = extras["urine_salinity"]
-        meq = percent / 0.9 * 154   # 0.9% = 154 mEq/L
-        if percent < 0.2:
-            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 매우 낮음 → 수분 과다 섭취/저염 가능성")
-        elif percent > 1.0:
-            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 높음 → 고염식/수분 부족 가능성")
-        else:
-            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 정상 범위")
-
     if lines:
         for line in lines:
             st.write(line)
@@ -288,11 +335,14 @@ if run:
         for a in extras["abx"]:
             st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
 
+    # 발열 가이드
+    st.markdown("### 🌡️ 발열 가이드")
+    st.write(FEVER_GUIDE)
+
     # 투석 환자용 염도 해석
     if category == "투석 환자" and extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
         percent = float(extras["urine_salinity"])
-        # 0.9% NaCl ≈ 154 mEq/L 기준으로 근사 환산
-        meq = percent / 0.9 * 154
+        meq = percent / 0.9 * 154  # 0.9% NaCl ≈ 154 mEq/L
         st.markdown("### 🧂 소변 염도 해석")
         if percent < 0.2:
             st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **매우 낮음** → 수분 과다/저염 가능성")
@@ -300,9 +350,6 @@ if run:
             st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **높음** → 고염식/수분 부족 가능성")
         else:
             st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **중간 범위** (대략 0.2~1.0% 근처)")
-    # 발열 가이드
-    st.markdown("### 🌡️ 발열 가이드")
-    st.write(FEVER_GUIDE)
 
     # 보고서 MD 구성 (입력한 것만 표시)
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
@@ -322,9 +369,14 @@ if run:
         for ln in lines:
             buf.append(ln + "\n")
 
-    # 투석 환자 추가 정보 붙이기
+    # 음식 가이드 붙이기
+    if fs:
+        buf.append("\n## 음식 가이드\n")
+        for f in fs:
+            buf.append("- " + f + "\n")
+
+    # 투석 환자 추가 정보
     if category == "투석 환자":
-        # Include urine salinity in the MD report if present
         if extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
             percent = float(extras["urine_salinity"])
             meq = percent / 0.9 * 154
@@ -336,12 +388,6 @@ if run:
             buf.append(f"- 오늘 투석 시행: {'예' if extras.get('hd_today') else '아니오'}\n")
         if extras.get("post_hd_weight_delta") is not None:
             buf.append(f"- 투석 후 체중 변화: {extras.get('post_hd_weight_delta')} kg\n")
-
-    # 음식 가이드 붙이기
-    if fs:
-        buf.append("\n## 음식 가이드\n")
-        for f in fs:
-            buf.append("- " + f + "\n")
 
     # 약물/항생제 붙이기 (상세는 .md에 담고 UI는 요약만)
     if category == "항암치료" and meds:
@@ -367,15 +413,9 @@ if run:
 
     # 다운로드 (MD / TXT / PDF)
     st.subheader("📥 보고서 다운로드")
-    if HAS_EXPORTER:
-        base = f"bloodmap_{nickname or 'anon'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        render_download_buttons(report_md, base_filename=base, font_paths=["fonts/NanumGothic.ttf"], title="피수치 자동 해석 보고서")
-        st.caption("📌 한글 PDF가 깨지면 저장소에 fonts/NanumGothic.ttf를 추가해 주세요.")
-    else:
-        st.warning("report_exporter 모듈을 찾을 수 없습니다. MD만 다운로드됩니다.")
-        st.download_button("📝 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
-                           file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                           mime="text/markdown", use_container_width=True)
+    base = f"bloodmap_{nickname or 'anon'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    render_download_buttons_inline(report_md, base_filename=base, font_paths=["fonts/NanumGothic.ttf"], title="피수치 자동 해석 보고서")
+    st.caption("📌 한글 PDF가 깨지면 저장소에 fonts/NanumGothic.ttf를 추가해 주세요.")
 
     # 저장 (세션)
     if nickname.strip():
@@ -398,18 +438,15 @@ st.markdown("---")
 st.subheader("💾 데이터 관리 (추이 그래프용)")
 c1, c2 = st.columns(2)
 with c1:
-    # Export all records as JSON
     json_bytes = json.dumps(st.session_state.records, ensure_ascii=False, indent=2).encode("utf-8")
     st.download_button("⬇️ 전체 데이터 내보내기 (.json)", data=json_bytes, file_name="bloodmap_records.json",
                        mime="application/json", use_container_width=True)
 with c2:
-    # Per-nickname CSV export (if pandas)
     if HAS_PD and st.session_state.records:
         who = st.selectbox("CSV 내보낼 별명 선택", ["(선택)"] + sorted(st.session_state.records.keys()))
         if who != "(선택)":
             rows = st.session_state.records.get(who, [])
             if rows:
-                # Flatten to rows with the core series
                 flat = []
                 for r in rows:
                     row = {"date": r.get("date"), "ts": r.get("ts")}
@@ -423,7 +460,6 @@ with c2:
             else:
                 st.info("선택한 별명 데이터가 없습니다.")
 
-# Import JSON and merge
 uploaded = st.file_uploader("📤 데이터 불러오기 (.json)", type=["json"], accept_multiple_files=False)
 if uploaded is not None:
     try:
@@ -450,7 +486,6 @@ else:
         sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
         rows = st.session_state.records.get(sel, [])
         if rows:
-            # Sort by date (or ts)
             rows_sorted = sorted(rows, key=sort_key_for_record)
             data = []
             for r in rows_sorted:
