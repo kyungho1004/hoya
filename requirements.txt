@@ -1,2 +1,2 @@
 streamlit>=1.36
-reportlab>=3.6
+pandas>=2.1
