@@ -289,9 +289,15 @@ with top_right:
     easy_mode = t4.toggle("🧒 쉬운말 모드", value=True, key="opt_easy")
     dark = t5.toggle("🖤 다크모드", value=False, key="opt_dark")
 
-if big:
-    st.markdown(\"\"\"<style>.stMarkdown, .stText, .stDownloadButton, .stButton button {font-size:1.08rem;line-height:1.7}
-    .stTextInput input, .stNumberInput input {font-size:1.08rem}</style>\"\"\", unsafe_allow_html=True)
+st.markdown("""
+<style>
+.stMarkdown, .stText, .stDownloadButton, .stButton button {
+    font-size:1.08rem;
+    line-height:1.7;
+}
+</style>
+""", unsafe_allow_html=True)
+
 if dark:
     st.markdown(\"\"\"<style>body,.stApp {background:#0f1115;color:#e6e6e6}
     .stButton button,.stDownloadButton button {background:#1f2430;color:#e6e6e6;border:1px solid #30364a}
