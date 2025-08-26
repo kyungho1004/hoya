@@ -1,94 +1,36 @@
+
 import json
 from datetime import datetime
 import streamlit as st
 
-# Optional pandas (for charts). App runs without it.
+# ============== Optional: pandas for charts ==============
 try:
     import pandas as pd
     HAS_PD = True
 except Exception:
     HAS_PD = False
 
-import streamlit as st
-import datetime
-
-
+# ============== Page setup ==============
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기")
 st.markdown("👤 **제작자: Hoya / 자문: GPT**")
 
+# --- Hard mobile-safe CSS: single column, full width, prevent wrapping glitches
+st.markdown("""
+<style>
+/* Force single-column feel and stable spacing */
+.block-container { padding-top: 1rem !important; max-width: 720px; }
+[data-testid="stHorizontalBlock"] { display:block !important; }
+div.row-widget.stRadio > div { flex-direction: column; gap: .25rem; }
+button, .stButton button { width: 100% !important; }
+</style>
+""", unsafe_allow_html=True)
 
-st.divider()
-st.header("1️⃣ 환자 정보 입력")
-name = st.text_input("별명 또는 환자 이름을 입력하세요")
-date = st.date_input("검사 날짜", value=datetime.date.today())
-
-
-st.divider()
-st.header("2️⃣ 혈액 검사 수치 입력")
-st.markdown("🧪 아래 수치는 모두 선택 입력입니다. 입력한 수치만 해석 결과에 반영됩니다.")
-
-
-# ✅ 항목 순서 고정 (2025-08-25 기준) - 한글 병기
-wbc = st.number_input("WBC (백혈구)", step=0.1)
-hb = st.number_input("Hb (혈색소)", step=0.1)
-plt = st.number_input("PLT (혈소판)", step=0.1)
-anc = st.number_input("ANC (호중구)", step=1.0)
-ca = st.number_input("Ca (칼슘)", step=0.1)
-p = st.number_input("P (인)", step=0.1)
-na = st.number_input("Na (소디움)", step=0.1)
-k = st.number_input("K (포타슘)", step=0.1)
-alb = st.number_input("Albumin (알부민)", step=0.1)
-glu = st.number_input("Glucose (혈당)", step=1.0)
-tp = st.number_input("Total Protein (총단백)", step=0.1)
-ast = st.number_input("AST", step=1.0)
-alt = st.number_input("ALT", step=1.0)
-ldh = st.number_input("LDH", step=1.0)
-crp = st.number_input("CRP", step=0.1)
-cr = st.number_input("Creatinine (Cr)", step=0.1)
-ua = st.number_input("Uric Acid (요산)", step=0.1)
-tb = st.number_input("Total Bilirubin (TB)", step=0.1)
-bun = st.number_input("BUN", step=0.1)
-bnp = st.number_input("BNP (선택)", step=1.0)
-
-
-st.divider()
-st.header("3️⃣ 해석 실행 및 결과 보기")
-st.markdown("🚀 해석하기 버튼을 누르면 결과가 나타납니다.")
-
-
-if st.button("🔍 해석하기"):
-    st.success("[해석 결과 요약 및 상세 분석 출력 예정 영역]")
-
-
-# 예시 출력 - 이후 로직 연결 필요
-st.markdown(f"**{name}**님의 검사일: {date}")
-st.markdown(f"- 백혈구(WBC): {wbc}")
-st.markdown(f"- 혈색소(Hb): {hb}")
-st.markdown(f"- 혈소판(PLT): {plt}")
-st.markdown(f"- 호중구(ANC): {anc}")
-st.markdown(f"- 칼슘(Ca): {ca}")
-st.markdown(f"- 인(P): {p}")
-st.markdown(f"- 나트륨(Na): {na}")
-st.markdown(f"- 칼륨(K): {k}")
-st.markdown(f"- 알부민: {alb}")
-st.markdown(f"- 혈당: {glu}")
-st.markdown(f"- 총단백: {tp}")
-st.markdown(f"- AST: {ast}")
-st.markdown(f"- ALT: {alt}")
-st.markdown(f"- LDH: {ldh}")
-st.markdown(f"- CRP: {crp}")
-st.markdown(f"- 크레아티닌(Cr): {cr}")
-st.markdown(f"- 요산(UA): {ua}")
-st.markdown(f"- 빌리루빈(TB): {tb}")
-st.markdown(f"- BUN: {bun}")
-st.markdown(f"- BNP: {bnp}")
-
-
-# ⛔ 여기에 해석/결과 출력 등 로직은 따로 있음. 이 코드는 입력 순서 및 UI 구조만 고친 것임.
-
-
-st.write("\n✅ 모든 수치는 모바일과 PC에서 동일한 순서로 위에서 아래로 정렬되어 있습니다.")
+# ============== Constants & Dictionaries ==============
+ORDER = [
+    "WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein",
+    "AST","ALT","LDH","CRP","Cr","Uric Acid","Total Bilirubin","BUN","BNP"
+]
 
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
@@ -125,36 +67,14 @@ FOODS = {
 }
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
-# ================== HELPERS ==================
-def parse_vals(s: str):
-    # Normalize punctuation/newlines; **preserve empty entries**
-    s = (s or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n")
-    s = s.strip("\n ")  # keep internal blanks but trim edges
-    if not s:
-        return [None]*len(ORDER)
-    # If comma list without newlines → comma mode (preserve empty among ,,)
-    if ("," in s) and ("\n" not in s):
-        tokens = [tok.strip() for tok in s.split(",")]
-    else:
-        # Line mode: preserve empty lines to keep positions
-        tokens = [line.strip() for line in s.split("\n")]
-    out = []
-    for i in range(len(ORDER)):
-        tok = tokens[i] if i < len(tokens) else ""
-        try:
-            out.append(float(tok) if tok != "" else None)
-        except:
-            out.append(None)
-    return out
-
+# ============== Helpers ==============
 def entered(v):
     try:
-        return v is not None and float(v) > 0
+        return v is not None and str(v) != "" and float(v) is not None
     except Exception:
         return False
 
-def interpret_labs(vals):
-    l = dict(zip(ORDER, vals))
+def interpret_labs(l):
     out=[]
     def add(s): out.append("- " + s)
     if entered(l.get("WBC")): add(f"WBC {l['WBC']}: " + ("낮음 → 감염 위험↑" if l["WBC"]<4 else "높음 → 감염/염증 가능" if l["WBC"]>10 else "정상"))
@@ -168,7 +88,7 @@ def interpret_labs(vals):
         ratio=l["BUN"]/l["Cr"]
         if ratio>20: add(f"BUN/Cr {ratio:.1f}: 탈수 의심")
         elif ratio<10: add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
-    return out, l
+    return out
 
 def summarize_meds(meds: dict):
     out=[]
@@ -195,79 +115,106 @@ def food_suggestions(l):
     foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return foods
 
-# ================== UI (TEXT-ONLY, ONE BOX) ==================
-with st.form("main_form", clear_on_submit=False):
-    raw = st.text_area(
-        "값을 순서대로 입력 (줄바꿈/쉼표 가능)",
-        height=200,
-        placeholder="예) 5.2, 11.8, 180, 1200, ...",
-        help="ORDER: " + ", ".join(ORDER),
-        key="raw_text"
-    )
-    category = st.radio("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"], key="cat_radio")
+# ============== State init ==============
+if "records" not in st.session_state:
+    st.session_state.records = {}
 
-    meds, extras = {}, {}
+# ============== 1) 환자 정보 ==============
+st.divider()
+st.header("1️⃣ 환자 정보 입력")
+nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
+exam_date = st.date_input("검사 날짜", value=datetime.today())
 
-    # 항암치료
-    if category == "항암치료":
-        st.markdown("### 💊 항암제/보조제")
-        if st.checkbox("ARA-C 사용", key="med_arac_use"):
-            meds["ARA-C"] = {
-                "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="med_arac_form"),
-                "dose": st.number_input("ARA-C 용량/일(임의 입력)", min_value=0.0, step=0.1, key="med_arac_dose"),
-            }
-        for key in ["6-MP","MTX","ATRA","G-CSF","Hydroxyurea","Daunorubicin","Idarubicin","Mitoxantrone",
-                    "Cyclophosphamide","Etoposide","Topotecan","Fludarabine","Vincristine"]:
-            if st.checkbox(f"{key} 사용", key=f"med_use_{key}"):
-                meds[key] = {"dose_or_tabs": st.number_input(f"{key} 투여량/알약 개수(소수 허용)", min_value=0.0, step=0.1, key=f"med_dose_{key}")}
-        st.info(FEVER_GUIDE)
-        if st.checkbox("이뇨제 복용 중", key="diuretic_on"):
-            extras["diuretic"] = True
+# ============== 2) 수치 입력 (STRICT ORDER, single column) ==============
+st.divider()
+st.header("2️⃣ 혈액 검사 수치 입력 (입력한 항목만 결과에 표시)")
 
-    # 항생제
-    if category == "항생제":
-        st.markdown("### 🧪 항생제")
-        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()), key="abx_select")
+vals = {}
+vals["WBC"] = st.number_input("WBC (백혈구)", step=0.1, format="%.1f")
+vals["Hb"] = st.number_input("Hb (혈색소)", step=0.1, format="%.1f")
+vals["PLT"] = st.number_input("PLT (혈소판)", step=1.0, format="%.0f")
+vals["ANC"] = st.number_input("ANC (호중구)", step=1.0, format="%.0f")
+vals["Ca"] = st.number_input("Ca (칼슘)", step=0.1, format="%.1f")
+vals["P"] = st.number_input("P (인)", step=0.1, format="%.1f")
+vals["Na"] = st.number_input("Na (소디움)", step=0.1, format="%.1f")
+vals["K"] = st.number_input("K (포타슘)", step=0.1, format="%.1f")
+vals["Albumin"] = st.number_input("Albumin (알부민)", step=0.1, format="%.1f")
+vals["Glucose"] = st.number_input("Glucose (혈당)", step=1.0, format="%.0f")
+vals["Total Protein"] = st.number_input("Total Protein (총단백)", step=0.1, format="%.1f")
+vals["AST"] = st.number_input("AST", step=1.0, format="%.0f")
+vals["ALT"] = st.number_input("ALT", step=1.0, format="%.0f")
+vals["LDH"] = st.number_input("LDH", step=1.0, format="%.0f")
+vals["CRP"] = st.number_input("CRP", step=0.1, format="%.1f")
+vals["Cr"] = st.number_input("Creatinine (Cr)", step=0.1, format="%.1f")
+vals["Uric Acid"] = st.number_input("Uric Acid (요산)", step=0.1, format="%.1f")
+vals["Total Bilirubin"] = st.number_input("Total Bilirubin (TB)", step=0.1, format="%.1f")
+vals["BUN"] = st.number_input("BUN", step=0.1, format="%.1f")
+vals["BNP"] = st.number_input("BNP (선택)", step=1.0, format="%.0f")
 
-    # 투석
-    if category == "투석 환자":
-        st.markdown("### 🫧 투석 추가 항목")
-        extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0, key="dialysis_urine")
-        extras["hd_today"] = st.checkbox("오늘 투석 시행", key="dialysis_today")
-        extras["post_hd_weight_delta"] = st.number_input("투석 후 체중 변화 (kg)", min_value=-10.0, max_value=10.0, step=0.1, key="dialysis_delta")
-        if st.checkbox("이뇨제 복용 중", key="diuretic_on_dial"):
-            extras["diuretic"] = True
+# ============== 3) 카테고리 선택 ==============
+st.divider()
+st.header("3️⃣ 카테고리 및 추가 정보")
+category = st.radio("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"], index=0)
 
-    # 당뇨
-    if category == "당뇨 환자":
-        st.markdown("### 🍚 당뇨 지표")
-        extras["FPG"] = st.number_input("식전 혈당 (mg/dL)", min_value=0.0, step=1.0, key="dm_fpg")
-        extras["PP1h"] = st.number_input("식후 1시간 혈당 (mg/dL)", min_value=0.0, step=1.0, key="dm_pp1")
-        extras["PP2h"] = st.number_input("식후 2시간 혈당 (mg/dL)", min_value=0.0, step=1.0, key="dm_pp2")
-        extras["HbA1c"] = st.number_input("HbA1c (%)", min_value=0.0, step=0.1, format="%.1f", key="dm_a1c")
+meds, extras = {}, {}
 
-    nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동", key="nick")
+if category == "항암치료":
+    st.markdown("### 💊 항암제/보조제")
+    if st.checkbox("ARA-C 사용"):
+        meds["ARA-C"] = {
+            "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"]),
+            "dose": st.number_input("ARA-C 용량/일(임의 입력)", min_value=0.0, step=0.1),
+        }
+    for key in ["6-MP","MTX","ATRA","G-CSF","Hydroxyurea","Daunorubicin","Idarubicin","Mitoxantrone",
+                "Cyclophosphamide","Etoposide","Topotecan","Fludarabine","Vincristine"]:
+        if st.checkbox(f"{key} 사용"):
+            meds[key] = {"dose_or_tabs": st.number_input(f"{key} 투여량/알약 개수(소수 허용)", min_value=0.0, step=0.1, key=f"dose_{key}")}
+    if st.checkbox("이뇨제 복용 중"):
+        extras["diuretic"] = True
+    st.info("🌡️ 발열 가이드는 아래에 항상 표시됩니다.")
 
-    run = st.form_submit_button("🔎 해석하기", use_container_width=True)
+elif category == "항생제":
+    st.markdown("### 🧪 항생제")
+    extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
 
-# ================== RUN ==================
+elif category == "투석 환자":
+    st.markdown("### 🫧 투석 추가 항목")
+    extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0)
+    extras["hd_today"] = st.checkbox("오늘 투석 시행")
+    extras["post_hd_weight_delta"] = st.number_input("투석 후 체중 변화 (kg)", min_value=-10.0, max_value=10.0, step=0.1)
+    if st.checkbox("이뇨제 복용 중", key="dial_diuretic"):
+        extras["diuretic"] = True
+
+elif category == "당뇨 환자":
+    st.markdown("### 🍚 당뇨 지표")
+    extras["FPG"] = st.number_input("식전 혈당 (mg/dL)", min_value=0.0, step=1.0)
+    extras["PP1h"] = st.number_input("식후 1시간 혈당 (mg/dL)", min_value=0.0, step=1.0)
+    extras["PP2h"] = st.number_input("식후 2시간 혈당 (mg/dL)", min_value=0.0, step=1.0)
+    extras["HbA1c"] = st.number_input("HbA1c (%)", min_value=0.0, step=0.1, format="%.1f")
+
+# ============== 4) 실행 버튼 ==============
+st.divider()
+run = st.button("🔎 해석하기", use_container_width=True)
+
+# ============== 5) 결과 ==============
 if run:
-    vals = parse_vals(st.session_state.get("raw_text",""))
-    lines, labs = interpret_labs(vals)
-
     st.subheader("📋 해석 결과")
-    for line in lines: st.write(line)
+    lines = interpret_labs(vals)
+    for line in lines:
+        st.write(line)
 
-    fs = food_suggestions(labs)
+    # 음식 가이드
+    fs = food_suggestions(vals)
     if fs:
         st.markdown("### 🥗 음식 가이드")
         for f in fs: st.write("- " + f)
 
-    if category == "항암치료" and 'meds' in locals() and meds:
+    # 항암제/항생제 요약
+    if category == "항암치료" and meds:
         st.markdown("### 💊 항암제 부작용·상호작용 요약")
         for line in summarize_meds(meds): st.write(line)
 
-    if category == "항생제" and 'extras' in locals() and extras.get("abx"):
+    if category == "항생제" and extras.get("abx"):
         st.markdown("### 🧪 항생제 주의 요약")
         for a in extras["abx"]: st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
 
@@ -275,29 +222,41 @@ if run:
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
-    # 보고서
-    buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n", f"- 카테고리: {category}\n\n"]
-    for name, v in labs.items():
-        if entered(v): buf.append(f"- {name}: {v}\n")
+    # 보고서(.md) - 입력한 항목만
+    buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
+           f"- 별명: {nickname or '미기재'}\n",
+           f"- 검사일: {exam_date}\n",
+           f"- 카테고리: {category}\n\n"]
+    for k in ORDER:
+        label_map = {
+            "Cr":"Creatinine (Cr)",
+            "Uric Acid":"Uric Acid (요산)",
+            "Total Bilirubin":"Total Bilirubin (TB)",
+        }
+        key = label_map.get(k, k)
+        v = vals.get(k if k in vals else key)
+        if entered(v):
+            buf.append(f"- {k}: {v}\n")
     report_md = "".join(buf)
-    st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
+    st.download_button("📥 보고서(.md) 다운로드",
+                       data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
 
     # 저장
     if nickname.strip():
-        if st.checkbox("📝 이 별명으로 저장", value=True):
-            rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                   "category": category,
-                   "labs": {k:v for k,v in labs.items() if entered(v)},
-                   "meds": locals().get("meds", {}),
-                   "extras": locals().get("extras", {})}
-            st.session_state.records.setdefault(nickname, []).append(rec)
-            st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
+        rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "date": str(exam_date),
+               "category": category,
+               "labs": {k:v for k,v in vals.items() if entered(v)},
+               "meds": meds,
+               "extras": extras}
+        st.session_state.records.setdefault(nickname, []).append(rec)
+        st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
 
-# ================== GRAPHS (optional) ==================
+# ============== 6) 그래프 ==============
 st.markdown("---")
 st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
 if not HAS_PD:
@@ -307,9 +266,15 @@ else:
         sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
         rows = st.session_state.records.get(sel, [])
         if rows:
-            data = [{"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC","Hb","PLT","CRP","ANC"]}} for r in rows]
-            df = pd.DataFrame(data).set_index("ts")
-            st.line_chart(df.dropna(how="all"))
+            data = []
+            for r in rows:
+                row = {"ts": r["ts"]}
+                for k in ["WBC","Hb","PLT","CRP","ANC"]:
+                    row[k] = r["labs"].get(k)
+                data.append(row)
+            if data:
+                df = pd.DataFrame(data).set_index("ts")
+                st.line_chart(df.dropna(how="all"))
         else:
             st.info("선택한 별명의 저장 기록이 없습니다.")
     else:
