@@ -1,17 +1,30 @@
-from datetime import datetime, date  # ✅ fixed import
+
+from datetime import datetime, date  # ✅ fixed import (no 'import datetime')
 import streamlit as st
 
+# Optional: pandas for simple charts (not required for core features)
 try:
     import pandas as pd
     HAS_PD = True
 except Exception:
     HAS_PD = False
 
+# ====== App Config ======
 st.set_page_config(page_title="피수치 자동 해석기", layout="centered")
 st.title("🩸 피수치 자동 해석기")
 
-# --- 공통 ---
+# ====== Constants & Helpers ======
 ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"]
+
+FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
+
+FOODS = {
+    "Albumin_low": ["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
+    "K_low": ["바나나","감자","호박죽","고구마","오렌지"],
+    "Hb_low": ["소고기","시금치","두부","달걀 노른자","렌틸콩"],
+    "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
+    "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
+}
 
 def entered(v):
     try:
@@ -52,14 +65,29 @@ def interpret_labs(vals):
         elif ratio<10: add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
     return out, l
 
-# --- 입력 ---
+def food_suggestions(l):
+    tips = []
+    if entered(l.get("Albumin")) and l["Albumin"] < 3.5:
+        tips.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
+    if entered(l.get("K")) and l["K"] < 3.5:
+        tips.append("칼륨 낮음 → " + ", ".join(FOODS["K_low"]))
+    if entered(l.get("Hb")) and l["Hb"] < 12:
+        tips.append("Hb 낮음 → " + ", ".join(FOODS["Hb_low"]))
+    if entered(l.get("Na")) and l["Na"] < 135:
+        tips.append("나트륨 낮음 → " + ", ".join(FOODS["Na_low"]))
+    if entered(l.get("Ca")) and l["Ca"] < 8.5:
+        tips.append("칼슘 낮음 → " + ", ".join(FOODS["Ca_low"]))
+    if entered(l.get("ANC")) and l["ANC"] < 500:
+        tips.append("🧼 호중구 감소: 생채소 금지, 익혀 섭취, 2시간 지난 음식 금지.")
+    tips.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
+    return tips
+
+# ====== UI ======
 st.header("1) 기본 정보")
-date_val = st.date_input("검사 날짜", value=date.today())
+date_val = st.date_input("검사 날짜", value=date.today())  # ✅ no datetime collision
 
 st.header("2) 입력 방식 선택")
 mode = st.radio("입력 방식", ["개별 칸으로 입력", "텍스트로 한 번에"], horizontal=True)
-
-vals = [None]*len(ORDER)
 
 with st.form("main", clear_on_submit=False):
     if mode == "개별 칸으로 입력":
@@ -84,10 +112,10 @@ with st.form("main", clear_on_submit=False):
         BUN = st.number_input("BUN", step=0.1)
         BNP = st.number_input("BNP (선택)", step=1.0)
     else:
-        raw = st.text_area("값을 순서대로 입력 (줄바꿈/쉼표 가능)", height=160, placeholder="예) 5.2, 11.8, 180, 1200, …")
+        raw = st.text_area("값을 순서대로 입력 (WBC→…→BNP, 줄바꿈/쉼표 모두 가능)", height=160, placeholder="예) 5.2, 11.8, 180, 1200, …")
     run = st.form_submit_button("🔎 해석하기", use_container_width=True)
 
-# --- 처리 ---
+# ====== RUN ======
 if run:
     if mode == "개별 칸으로 입력":
         mapping = {
@@ -107,7 +135,16 @@ if run:
     else:
         st.info("입력된 수치가 없습니다. 한 항목 이상 입력해 주세요.")
 
-    # 보고서 다운로드 (✅ datetime 사용 고정)
+    tips = food_suggestions(labs)
+    if tips:
+        st.markdown("### 🥗 음식 가이드")
+        for t in tips:
+            st.write("- " + t)
+
+    st.markdown("### 🌡️ 발열 가이드")
+    st.write(FEVER_GUIDE)
+
+    # 보고서 다운로드 (datetime.now() OK)
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
            f"- 입력 방식: {mode}\n",
            f"- 검사일: {date_val}\n\n"]
@@ -117,3 +154,4 @@ if run:
                        data="".join(buf).encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
+
