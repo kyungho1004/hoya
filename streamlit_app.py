@@ -83,7 +83,7 @@ def init_state():
 
 def entered(v):
     try:
-        return v is not None and str(v) != "" and float(v) == float(v) and float(v) != 0 or float(v) == 0 and isinstance(v,(int,float))
+        return (v is not None) and (str(v) != "") and (float(v) == float(v))
     except Exception:
         return False
 
@@ -92,7 +92,6 @@ def parse_vals(s: str):
     s = s.strip("\n ")
     if not s:
         return [None]*len(ORDER)
-    # comma-mode OR line-mode, preserve blanks
     tokens = [tok.strip() for tok in (s.split(",") if ("," in s and "\n" not in s) else s.split("\n"))]
     out = []
     for i in range(len(ORDER)):
@@ -173,7 +172,7 @@ col1, col2 = st.columns(2)
 with col1:
     nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
 with col2:
-    date_str = st.text_input("검사 날짜", value=dt.dt.datetime.now().strftime("%Y-%m-%d"))
+    date_str = st.text_input("검사 날짜", value=dt.date.today().isoformat())
 
 st.divider()
 st.header("2️⃣ 카테고리 선택")
@@ -270,7 +269,8 @@ if run:
         st.info("투석 환자: 칼륨/인/수분 관리가 중요합니다. 담당 의료진과 식이·체액 계획을 상의하세요.")
 
     # 보고서 (.md) - 입력한 값만 포함
-    buf = [f"# BloodMap 보고서 ({dt.dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
+    timestamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    buf = [f"# BloodMap 보고서 ({timestamp})\n",
            f"- 카테고리: {category}\n",
            f"- 별명: {nickname or ''}\n",
            f"- 검사일: {date_str}\n\n",
@@ -283,14 +283,14 @@ if run:
     st.download_button(
         "📥 보고서(.md) 다운로드",
         data=report_md.encode("utf-8"),
-        file_name=f"bloodmap_report_{dt.dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+        file_name=f"bloodmap_report_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
         mime="text/markdown"
     )
 
     # 저장 (별명 있는 경우만)
     if (nickname or "").strip():
         rec = {
-            "ts": dt.dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "ts": timestamp,
             "category": category,
             "labs": {k: v for k, v in labs.items() if entered(v)},
             "meds": meds,
