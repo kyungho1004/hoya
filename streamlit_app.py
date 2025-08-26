@@ -1,6 +1,6 @@
 
 import json
-from datetime import datetime
+from datetime import datetime, date  # ✅ use class+date directly to avoid collision
 import streamlit as st
 
 # Optional pandas (for charts). App runs without it.
@@ -10,8 +10,6 @@ try:
 except Exception:
     HAS_PD = False
 
-import datetime
-
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기")
 st.markdown("👤 **제작자: Hoya / 자문: GPT**")
@@ -19,7 +17,7 @@ st.markdown("👤 **제작자: Hoya / 자문: GPT**")
 st.divider()
 st.header("1️⃣ 환자 정보 입력")
 name = st.text_input("별명 또는 환자 이름을 입력하세요")
-date = st.date_input("검사 날짜", value=datetime.date.today())
+date_val = st.date_input("검사 날짜", value=date.today())  # ✅ fixed
 
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력")
@@ -28,7 +26,7 @@ st.markdown("🧪 아래 수치는 모두 선택 입력입니다. 입력한 수�
 # ✅ 항목 순서 고정 (2025-08-25 기준) - 한글 병기
 ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"]
 wbc = st.number_input("WBC (백혈구)", step=0.1)
-hb = st.number_input("Hb (혈색소)", step=0.1)
+hb = st.number_input("Hb (혈색소)", step=0.1)  # ✅ fixed label
 plt = st.number_input("PLT (혈소판)", step=0.1)
 anc = st.number_input("ANC (호중구)", step=1.0)
 ca = st.number_input("Ca (칼슘)", step=0.1)
@@ -56,7 +54,7 @@ if st.button("🔍 해석하기"):
     st.success("[해석 결과 요약 및 상세 분석 출력 예정 영역]")
 
 # 예시 출력 - 이후 로직 연결 필요
-st.markdown(f"**{name}**님의 검사일: {date}")
+st.markdown(f"**{name}**님의 검사일: {date_val}")
 st.markdown(f"- 백혈구(WBC): {wbc}")
 st.markdown(f"- 혈색소(Hb): {hb}")
 st.markdown(f"- 혈소판(PLT): {plt}")
@@ -117,16 +115,13 @@ FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 
 
 # ================== HELPERS ==================
 def parse_vals(s: str):
-    # Normalize punctuation/newlines; **preserve empty entries**
     s = (s or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n")
-    s = s.strip("\n ")  # keep internal blanks but trim edges
+    s = s.strip("\n ")
     if not s:
         return [None]*len(ORDER)
-    # If comma list without newlines → comma mode (preserve empty among ,,)
     if ("," in s) and ("\n" not in s):
         tokens = [tok.strip() for tok in s.split(",")]
     else:
-        # Line mode: preserve empty lines to keep positions
         tokens = [line.strip() for line in s.split("\n")]
     out = []
     for i in range(len(ORDER)):
@@ -185,10 +180,11 @@ def food_suggestions(l):
     foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return foods
 
-# ================== UI (TEXT-ONLY, ONE BOX) ==================
+# ================== STATE ==================
 if "records" not in st.session_state:
     st.session_state.records = {}
 
+# ================== UI (TEXT-ONLY, ONE BOX + 카테고리) ==================
 with st.form("main_form", clear_on_submit=False):
     raw = st.text_area(
         "값을 순서대로 입력 (줄바꿈/쉼표 가능)",
@@ -268,10 +264,11 @@ if run:
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
-    # 보고서
-    buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\\n", f"- 카테고리: {category}\\n\\n"]
-    for name, v in labs.items():
-        if entered(v): buf.append(f"- {name}: {v}\\n")
+    # 보고서 (✅ fixed: datetime.now -> from datetime import datetime)
+    buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
+           f"- 카테고리: {category}\n\n"]
+    for name_key, v in labs.items():
+        if entered(v): buf.append(f"- {name_key}: {v}\n")
     report_md = "".join(buf)
     st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
