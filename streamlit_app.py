@@ -253,6 +253,17 @@ if run:
     lines, labs = interpret_labs(vals)
 
     st.subheader("📋 해석 결과")
+    # 소변 염도 해석
+    if extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
+        percent = extras["urine_salinity"]
+        meq = percent / 0.9 * 154   # 0.9% = 154 mEq/L
+        if percent < 0.2:
+            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 매우 낮음 → 수분 과다 섭취/저염 가능성")
+        elif percent > 1.0:
+            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 높음 → 고염식/수분 부족 가능성")
+        else:
+            st.write(f"소변 염도 {percent}% (~{meq:.0f} mEq/L): 정상 범위")
+
     if lines:
         for line in lines:
             st.write(line)
@@ -277,6 +288,18 @@ if run:
         for a in extras["abx"]:
             st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
 
+    # 투석 환자용 염도 해석
+    if category == "투석 환자" and extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
+        percent = float(extras["urine_salinity"])
+        # 0.9% NaCl ≈ 154 mEq/L 기준으로 근사 환산
+        meq = percent / 0.9 * 154
+        st.markdown("### 🧂 소변 염도 해석")
+        if percent < 0.2:
+            st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **매우 낮음** → 수분 과다/저염 가능성")
+        elif percent > 1.0:
+            st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **높음** → 고염식/수분 부족 가능성")
+        else:
+            st.write(f"소변 염도 {percent}% (≈ {meq:.0f} mEq/L): **중간 범위** (대략 0.2~1.0% 근처)")
     # 발열 가이드
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
@@ -298,6 +321,21 @@ if run:
         buf.append("\n## 해석 결과\n")
         for ln in lines:
             buf.append(ln + "\n")
+
+    # 투석 환자 추가 정보 붙이기
+    if category == "투석 환자":
+        # Include urine salinity in the MD report if present
+        if extras.get("urine_salinity") is not None and extras["urine_salinity"] > 0:
+            percent = float(extras["urine_salinity"])
+            meq = percent / 0.9 * 154
+            buf.append("\n## 투석 부가 정보\n")
+            buf.append(f"- 소변 염도: {percent}% (≈ {meq:.0f} mEq/L)\n")
+        if extras.get("urine_ml") is not None:
+            buf.append(f"- 하루 소변량: {extras['urine_ml']} mL\n")
+        if extras.get("hd_today") is not None:
+            buf.append(f"- 오늘 투석 시행: {'예' if extras.get('hd_today') else '아니오'}\n")
+        if extras.get("post_hd_weight_delta") is not None:
+            buf.append(f"- 투석 후 체중 변화: {extras.get('post_hd_weight_delta')} kg\n")
 
     # 음식 가이드 붙이기
     if fs:
@@ -426,4 +464,3 @@ else:
             st.info("선택한 별명의 저장 기록이 없습니다.")
     else:
         st.info("아직 저장된 기록이 없습니다. 해석 후 저장을 눌러보세요.")
-
