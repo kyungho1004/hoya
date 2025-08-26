@@ -14,7 +14,7 @@ except Exception:
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기")
 st.markdown("👤 **제작: Hoya / 자문: GPT**")
-st.caption("※ 교육·보조용. 치료 결정은 반드시 주치의와 상의하세요. 목록에 없는 약물은 마지막에 '기타 약물(문의)'에 적어주세요.")
+st.caption("※ 교육·보조용. 치료 결정은 반드시 주치의와 상의하세요. 목록에 없는 약물은 마지막에 '기타 약물 문의(https://cafe.naver.com/bloodmap)'에 적어주세요.")
 
 # -------------------- 피수치 정의 --------------------
 CORE_ORDER = [
