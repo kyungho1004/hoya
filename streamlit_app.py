@@ -21,21 +21,41 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-st.title("🔬 BloodMap — FINAL (200% 초안전 · 텍스트 입력 고정)")
-st.caption("입력은 **텍스트 한 칸**만 사용 → ORDER에 1:1 매핑. 모바일/PC 완전 동일.")
+import streamlit as st
 
-# ================== SESSION STATE ==================
-if "records" not in st.session_state:
-    st.session_state.records = {}   # { nickname: [ {ts, category, labs, meds, extras} ] }
-if "views" not in st.session_state:
-    st.session_state.views = 0
-st.session_state.views += 1
 
-# ================== CONSTANTS ==================
-ORDER = [
-    "WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose",
-    "Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"
-]
+st.set_page_config(page_title="피수치 자동 해석기", layout="centered")
+st.title("🔬 피수치 자동 해석기 by Hoya")
+st.write("각 항목을 위에서 아래로 차례대로 입력하세요 (모바일 최적화 완료)")
+
+
+# ✅ 형이 지정한 최종 고정 순서 (한글 병기 포함)
+wbc = st.number_input("WBC (백혈구)", min_value=0.0, step=0.1)
+hb = st.number_input("Hb (혈색소)", min_value=0.0, step=0.1)
+plt = st.number_input("PLT (혈소판)", min_value=0.0, step=0.1)
+anc = st.number_input("ANC (호중구)", min_value=0.0, step=0.1)
+ca = st.number_input("Ca (칼슘)", min_value=0.0, step=0.1)
+p = st.number_input("P (인)", min_value=0.0, step=0.1)
+na = st.number_input("Na (소디움)", min_value=0.0, step=0.1)
+k = st.number_input("K (포타슘)", min_value=0.0, step=0.1)
+alb = st.number_input("Albumin (알부민)", min_value=0.0, step=0.1)
+glu = st.number_input("Glucose (혈당)", min_value=0.0, step=0.1)
+tp = st.number_input("Total Protein (총단백)", min_value=0.0, step=0.1)
+ast = st.number_input("AST", min_value=0.0, step=0.1)
+alt = st.number_input("ALT", min_value=0.0, step=0.1)
+ldh = st.number_input("LDH", min_value=0.0, step=0.1)
+crp = st.number_input("CRP", min_value=0.0, step=0.1)
+cr = st.number_input("Creatinine (Cr)", min_value=0.0, step=0.1)
+ua = st.number_input("Uric Acid (UA, 요산)", min_value=0.0, step=0.1)
+tb = st.number_input("Total Bilirubin (총빌리루빈)", min_value=0.0, step=0.1)
+bun = st.number_input("BUN", min_value=0.0, step=0.1)
+bnp = st.number_input("BNP", min_value=0.0, step=0.1, format="%.1f")
+
+
+# ⛔ 여기에 해석/결과 출력 등 로직은 따로 있음. 이 코드는 입력 순서 및 UI 구조만 고친 것임.
+
+
+st.write("\n✅ 모든 수치는 모바일과 PC에서 동일한 순서로 위에서 아래로 정렬되어 있습니다.")
 
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
