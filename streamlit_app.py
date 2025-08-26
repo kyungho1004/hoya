@@ -1,6 +1,6 @@
 
 import json
-from datetime import datetime
+import datetime as dt
 import streamlit as st
 
 # Optional pandas for charts (app works without it)
@@ -173,7 +173,7 @@ col1, col2 = st.columns(2)
 with col1:
     nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
 with col2:
-    date_str = st.text_input("검사 날짜", value=datetime.now().strftime("%Y-%m-%d"))
+    date_str = st.text_input("검사 날짜", value=dt.dt.datetime.now().strftime("%Y-%m-%d"))
 
 st.divider()
 st.header("2️⃣ 카테고리 선택")
@@ -270,7 +270,7 @@ if run:
         st.info("투석 환자: 칼륨/인/수분 관리가 중요합니다. 담당 의료진과 식이·체액 계획을 상의하세요.")
 
     # 보고서 (.md) - 입력한 값만 포함
-    buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
+    buf = [f"# BloodMap 보고서 ({dt.dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
            f"- 카테고리: {category}\n",
            f"- 별명: {nickname or ''}\n",
            f"- 검사일: {date_str}\n\n",
@@ -283,14 +283,14 @@ if run:
     st.download_button(
         "📥 보고서(.md) 다운로드",
         data=report_md.encode("utf-8"),
-        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+        file_name=f"bloodmap_report_{dt.dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
         mime="text/markdown"
     )
 
     # 저장 (별명 있는 경우만)
     if (nickname or "").strip():
         rec = {
-            "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "ts": dt.dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "category": category,
             "labs": {k: v for k, v in labs.items() if entered(v)},
             "meds": meds,
