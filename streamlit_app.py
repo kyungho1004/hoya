@@ -10,46 +10,80 @@ try:
 except Exception:
     HAS_PD = False
 
-# ================== PAGE CONFIG & MOBILE CSS ==================
-st.set_page_config(page_title="BloodMap | FINAL 200% SAFE", page_icon="🩸", layout="centered")
-st.markdown(
-    """
-    <style>
-    textarea{ font-size:16px !important; line-height:1.35; } /* iOS zoom & readability */
-    .stNumberInput label{ white-space:nowrap; }
-    </style>
-    """, unsafe_allow_html=True
-)
-
 import streamlit as st
+import datetime
 
 
-st.set_page_config(page_title="피수치 자동 해석기", layout="centered")
-st.title("🔬 피수치 자동 해석기 by Hoya")
-st.write("각 항목을 위에서 아래로 차례대로 입력하세요 (모바일 최적화 완료)")
+st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
+st.title("🩸 피수치 자동 해석기")
+st.markdown("👤 **제작자: Hoya / 자문: GPT**")
 
 
-# ✅ 형이 지정한 최종 고정 순서 (한글 병기 포함)
-wbc = st.number_input("WBC (백혈구)", min_value=0.0, step=0.1)
-hb = st.number_input("Hb (혈색소)", min_value=0.0, step=0.1)
-plt = st.number_input("PLT (혈소판)", min_value=0.0, step=0.1)
-anc = st.number_input("ANC (호중구)", min_value=0.0, step=0.1)
-ca = st.number_input("Ca (칼슘)", min_value=0.0, step=0.1)
-p = st.number_input("P (인)", min_value=0.0, step=0.1)
-na = st.number_input("Na (소디움)", min_value=0.0, step=0.1)
-k = st.number_input("K (포타슘)", min_value=0.0, step=0.1)
-alb = st.number_input("Albumin (알부민)", min_value=0.0, step=0.1)
-glu = st.number_input("Glucose (혈당)", min_value=0.0, step=0.1)
-tp = st.number_input("Total Protein (총단백)", min_value=0.0, step=0.1)
-ast = st.number_input("AST", min_value=0.0, step=0.1)
-alt = st.number_input("ALT", min_value=0.0, step=0.1)
-ldh = st.number_input("LDH", min_value=0.0, step=0.1)
-crp = st.number_input("CRP", min_value=0.0, step=0.1)
-cr = st.number_input("Creatinine (Cr)", min_value=0.0, step=0.1)
-ua = st.number_input("Uric Acid (UA, 요산)", min_value=0.0, step=0.1)
-tb = st.number_input("Total Bilirubin (총빌리루빈)", min_value=0.0, step=0.1)
-bun = st.number_input("BUN", min_value=0.0, step=0.1)
-bnp = st.number_input("BNP", min_value=0.0, step=0.1, format="%.1f")
+st.divider()
+st.header("1️⃣ 환자 정보 입력")
+name = st.text_input("별명 또는 환자 이름을 입력하세요")
+date = st.date_input("검사 날짜", value=datetime.date.today())
+
+
+st.divider()
+st.header("2️⃣ 혈액 검사 수치 입력")
+st.markdown("🧪 아래 수치는 모두 선택 입력입니다. 입력한 수치만 해석 결과에 반영됩니다.")
+
+
+# ✅ 항목 순서 고정 (2025-08-25 기준) - 한글 병기
+wbc = st.number_input("WBC (백혈구)", step=0.1)
+hb = st.number_input("Hb (혈색소)", step=0.1)
+plt = st.number_input("PLT (혈소판)", step=0.1)
+anc = st.number_input("ANC (호중구)", step=1.0)
+ca = st.number_input("Ca (칼슘)", step=0.1)
+p = st.number_input("P (인)", step=0.1)
+na = st.number_input("Na (소디움)", step=0.1)
+k = st.number_input("K (포타슘)", step=0.1)
+alb = st.number_input("Albumin (알부민)", step=0.1)
+glu = st.number_input("Glucose (혈당)", step=1.0)
+tp = st.number_input("Total Protein (총단백)", step=0.1)
+ast = st.number_input("AST", step=1.0)
+alt = st.number_input("ALT", step=1.0)
+ldh = st.number_input("LDH", step=1.0)
+crp = st.number_input("CRP", step=0.1)
+cr = st.number_input("Creatinine (Cr)", step=0.1)
+ua = st.number_input("Uric Acid (요산)", step=0.1)
+tb = st.number_input("Total Bilirubin (TB)", step=0.1)
+bun = st.number_input("BUN", step=0.1)
+bnp = st.number_input("BNP (선택)", step=1.0)
+
+
+st.divider()
+st.header("3️⃣ 해석 실행 및 결과 보기")
+st.markdown("🚀 해석하기 버튼을 누르면 결과가 나타납니다.")
+
+
+if st.button("🔍 해석하기"):
+st.success("[해석 결과 요약 및 상세 분석 출력 예정 영역]")
+
+
+# 예시 출력 - 이후 로직 연결 필요
+st.markdown(f"**{name}**님의 검사일: {date}")
+st.markdown(f"- 백혈구(WBC): {wbc}")
+st.markdown(f"- 혈색소(Hb): {hb}")
+st.markdown(f"- 혈소판(PLT): {plt}")
+st.markdown(f"- 호중구(ANC): {anc}")
+st.markdown(f"- 칼슘(Ca): {ca}")
+st.markdown(f"- 인(P): {p}")
+st.markdown(f"- 나트륨(Na): {na}")
+st.markdown(f"- 칼륨(K): {k}")
+st.markdown(f"- 알부민: {alb}")
+st.markdown(f"- 혈당: {glu}")
+st.markdown(f"- 총단백: {tp}")
+st.markdown(f"- AST: {ast}")
+st.markdown(f"- ALT: {alt}")
+st.markdown(f"- LDH: {ldh}")
+st.markdown(f"- CRP: {crp}")
+st.markdown(f"- 크레아티닌(Cr): {cr}")
+st.markdown(f"- 요산(UA): {ua}")
+st.markdown(f"- 빌리루빈(TB): {tb}")
+st.markdown(f"- BUN: {bun}")
+st.markdown(f"- BNP: {bnp}")
 
 
 # ⛔ 여기에 해석/결과 출력 등 로직은 따로 있음. 이 코드는 입력 순서 및 UI 구조만 고친 것임.
