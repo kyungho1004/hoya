@@ -154,7 +154,19 @@ FOODS = {
 }
 
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
-IRON_WARN = "⚠️ 항암/백혈병 환자는 철분제 복용을 권장하지 않습니다. (철분제+비타민C 병용 시 흡수↑ → 반드시 주치의 상담)"
+IRON_WARN =
+CANCER_TYPES = [
+    "해당 없음(일반)",
+    "ALL(급성 림프구성)",
+    "AML(급성 골수성)",
+    "CML(만성 골수성)",
+    "CLL(만성 림프구성)",
+    "림프종",
+    "고형암(항암 중)",
+]
+
+WBC_PROFILE_TYPES = ["글로벌 설정 따름", "해당 없음(일반)", "ALL(급성 림프구성)", "AML(급성 골수성)", "CML(만성 골수성)", "CLL(만성 림프구성)", "림프종", "고형암(항암 중)"]
+ "⚠️ 항암/백혈병 환자는 철분제 복용을 권장하지 않습니다. (철분제+비타민C 병용 시 흡수↑ → 반드시 주치의 상담)"
 
 # ================== HELPERS ==================
 def parse_vals(s: str):
@@ -184,9 +196,14 @@ def interpret_labs(vals):
     l = dict(zip(ORDER, vals))
     out=[]
     def add(s): out.append("- " + s)
-    if entered(l.get("WBC")): add(f"WBC {l['WBC']}: " + ("낮음 → 감염 위험↑" if l["WBC"]<4 else "높음 → 감염/염증 가능" if l["WBC"]>10 else "정상"))
-    if entered(l.get("Hb")): add(f"Hb {l['Hb']}: " + ("낮음 → 빈혈" if l["Hb"]<12 else "정상"))
-    if entered(l.get("PLT")): add(f"혈소판 {l['PLT']}: " + ("낮음 → 출혈 위험" if l["PLT"]<150 else "정상"))
+    if entered(l.get("WBC")):
+        _wbc_profile = st.session_state.get('wbc_profile','글로벌 설정 따름')
+        _cx = st.session_state.get('cancer_type','해당 없음(일반)') if _wbc_profile=='글로벌 설정 따름' else _wbc_profile
+        add(interpret_wbc_with_cancer(_cx, l['WBC'], l.get('ANC')))
+    if entered(l.get('Hb')):
+        add(interpret_hb_with_cancer(st.session_state.get('cancer_type','해당 없음(일반)'), l['Hb']))
+    if entered(l.get('PLT')):
+        add(interpret_plt_with_cancer(st.session_state.get('cancer_type','해당 없음(일반)'), l['PLT']))
     if entered(l.get("ANC")): add(f"ANC {l['ANC']}: " + ("중증 감소(<500)" if l["ANC"]<500 else "감소(<1500)" if l["ANC"]<1500 else "정상"))
     if entered(l.get("Albumin")): add(f"Albumin {l['Albumin']}: " + ("낮음 → 영양/염증/간질환 가능" if l["Albumin"]<3.5 else "정상"))
     if entered(l.get("Glucose")): add(f"Glucose {l['Glucose']}: " + ("고혈당(≥200)" if l["Glucose"]>=200 else "저혈당(<70)" if l["Glucose"]<70 else "정상"))
@@ -196,6 +213,52 @@ def interpret_labs(vals):
         if ratio>20: out.append(f"- BUN/Cr {ratio:.1f}: 탈수 의심")
         elif ratio<10: out.append(f"- BUN/Cr {ratio:.1f}: 간질환/영양 고려")
     return out, l
+
+def interpret_hb_with_cancer(cancer: str, hb: float) -> str:
+    msg = "정상"
+    if hb < 12:
+        msg = "낮음 → 빈혈"
+        if cancer in ["고형암(항암 중)","ALL(급성 림프구성)","AML(급성 골수성)","림프종"]:
+            msg += " · 항암/염증/영양 영향 가능"
+        if hb < 8:
+            msg += " · 중증 빈혈 고려"
+    return f"Hb {hb}: " + msg
+
+def interpret_plt_with_cancer(cancer: str, plt: float) -> str:
+    msg = "정상"
+    if plt < 150:
+        msg = "낮음 → 출혈 위험"
+        if cancer in ["고형암(항암 중)","ALL(급성 림프구성)","AML(급성 골수성)"]:
+            msg += " · 항암제/골수억제 가능"
+        if plt < 50:
+            msg += " · 심한 저하(주의)"
+    return f"혈소판 {plt}: " + msg
+def interpret_wbc_with_cancer(cancer: str, wbc: float, anc: float|None) -> str:
+    """
+    Cancer-aware WBC note. Keeps safety-first wording (not medical advice).
+    """
+    base = ""
+    if wbc < 4:
+        base = "낮음 → 감염 위험↑"
+        if cancer in ["ALL(급성 림프구성)","AML(급성 골수성)","림프종","고형암(항암 중)"]:
+            base += " · 항암 과정에서 흔할 수 있으나 발열 시 즉시 평가"
+    elif wbc > 10:
+        base = "높음 → 염증/감염 가능"
+        if cancer in ["CML(만성 골수성)","CLL(만성 림프구성)"]:
+            base += " · 질환 특성상 백혈구 상승 가능(주치의 계획과 비교)"
+    else:
+        base = "정상"
+        if cancer in ["ALL(급성 림프구성)","AML(급성 골수성)","고형암(항암 중)"]:
+            base += " (치료 단계에 따라 목표 범위는 달라질 수 있음)"
+    # ANC overlay
+    try:
+        if anc is not None:
+            if anc < 500: base += " · ANC<500: 응급 수준 주의"
+            elif anc < 1500: base += " · ANC 감소"
+    except Exception:
+        pass
+    return f"WBC {wbc}: " + base
+
 
 def summarize_meds(meds: dict):
     out=[]
@@ -247,13 +310,51 @@ st.header("2️⃣ 수치 입력 (한 칸에 모아서, 순서 고정)")
 help_text = "ORDER: " + ", ".join([f"{k}" for k in ORDER])
 raw = st.text_area(
     "값을 순서대로 입력 (쉼표 또는 줄바꿈으로 구분)",
-    height=180,
+    key="raw_input",
+    height=220,
     placeholder="예) 5.2, 9.3, 42, 320, 8.6, 3.2, 138, 4.1, 2.3, 110, 6.4, 103, 84, 426, 0.13, 0.84, 6.2, 0.8, 29, 392",
     help=help_text
-)
+
+# ---- 입력 도움 ----
+cols_help = st.columns([1,1,1])
+with cols_help[0]:
+    if st.button("🔁 예시값 채우기", use_container_width=True):
+        st.session_state.raw_input = "5.2, 9.3, 42, 320, 8.6, 3.2, 138, 4.1, 2.3, 110, 6.4, 103, 84, 426, 0.13, 0.84, 6.2, 0.8, 29, 392"
+with cols_help[1]:
+    st.write("")
+with cols_help[2]:
+    st.caption("쉼표(,) 또는 줄바꿈으로 구분 · 총 20개")
+
+# 실시간 개수/검증
+_preview_vals = parse_vals(st.session_state.get("raw_input",""))
+_filled = len([v for v in _preview_vals if v is not None])
+needed = len(ORDER)
+if _filled < needed:
+    st.info(f"입력된 값 {_filled}/{needed}개 · 부족 {needed-_filled}개")
+elif _filled > needed:
+    st.warning(f"입력된 값 {_filled}/{needed}개 · 초과 { _filled - needed }개 (마지막 값부터 무시됨)")
+else:
+    st.success(f"입력된 값 {needed}/{needed}개 ✔")
+
+with st.expander("🔎 순서/라벨 다시 보기", expanded=False):
+    st.markdown("**입력 순서(20개):** " + ", ".join(ORDER))
+    st.markdown("**라벨:** " + ", ".join([LABEL_MAP.get(k,k) for k in ORDER]))
+
+# 미리보기 테이블(선택)
+try:
+    import pandas as _pd
+    _df_prev = _pd.DataFrame({"항목": [LABEL_MAP.get(k,k) for k in ORDER], "값": _preview_vals})
+    st.dataframe(_df_prev, hide_index=True, use_container_width=True)
+except Exception:
+    pass
 
 st.divider()
 st.header("3️⃣ 카테고리 및 옵션")
+st.selectbox("🧬 암 종류 선택", CANCER_TYPES, key="cancer_type", help="전역 설정: 보고서 헤더와 기본 해석에 반영")
+st.selectbox("🧪 WBC 해석 프로파일", WBC_PROFILE_TYPES, key="wbc_profile", help="여기서 선택하면 WBC만 이 설정을 우선 적용")
+
+st.selectbox("🧬 암 종류 선택", CANCER_TYPES, key="cancer_type", help="WBC 해석에 우선 적용됩니다.")
+
 category = st.radio("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"], horizontal=True)
 
 meds, extras = {}, {}
