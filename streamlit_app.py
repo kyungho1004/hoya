@@ -269,7 +269,7 @@ if run:
         st.info("투석 환자: 칼륨/인/수분 관리가 중요합니다. 담당 의료진과 식이·체액 계획을 상의하세요.")
 
     # 보고서 (.md) - 입력한 값만 포함
-    timestamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = dt.dt.dt.dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     buf = [f"# BloodMap 보고서 ({timestamp})\n",
            f"- 카테고리: {category}\n",
            f"- 별명: {nickname or ''}\n",
@@ -283,7 +283,7 @@ if run:
     st.download_button(
         "📥 보고서(.md) 다운로드",
         data=report_md.encode("utf-8"),
-        file_name=f"bloodmap_report_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+        file_name=f"bloodmap_report_{dt.dt.dt.dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
         mime="text/markdown"
     )
 
