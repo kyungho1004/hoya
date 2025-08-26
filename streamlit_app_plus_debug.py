@@ -5,20 +5,18 @@ import pandas as pd
 import streamlit as st
 
 # ================== PAGE CONFIG & MOBILE CSS ==================
-st.set_page_config(page_title="BloodMap | 최종 초고정 듀얼입력", page_icon="🩸", layout="centered")
+st.set_page_config(page_title="BloodMap | 200% 초안전(텍스트 고정)", page_icon="🩸", layout="centered")
 st.markdown(
     """
     <style>
-    input[type=number]{ font-size:16px; } /* iOS zoom fix */
-    textarea{ font-size:16px !important; line-height:1.35; }
+    textarea{ font-size:16px !important; line-height:1.35; } /* iOS zoom & readability */
     .stNumberInput label{ white-space:nowrap; }
-    [data-testid="stDataFrame"] table{ font-size:14px; }
     </style>
     """, unsafe_allow_html=True
 )
 
-st.title("🔬 BloodMap — 최종 초고정 (듀얼 입력: 표/텍스트)")
-st.caption("모바일에서 순서 꼬임이 있으면 입력 모드를 **텍스트(초안전)** 로 바꾸세요.")
+st.title("🔬 BloodMap — 200% 초안전 (텍스트 입력 고정)")
+st.caption("값을 줄바꿈(또는 쉼표)로만 입력 → 내부 ORDER에 맞춰 매핑. 기기/브라우저 영향 0%.")
 
 # ================== SESSION STATE ==================
 if "records" not in st.session_state:
@@ -34,13 +32,14 @@ ORDER = [
     "Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"
 ]
 
+# ================== DICTS ==================
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 시 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
     "ATRA":{"alias":"베사노이드(트레티노인)","aes":["분화증후군","발열","피부/점막 건조","두통"],"warn":["분화증후군 의심 시 즉시 병원"],"ix":["테트라사이클린계와 가성뇌종양"]},
     "ARA-C":{"alias":"시타라빈","aes":["골수억제","발열","구내염","(HDAC) 신경독성"],"warn":["HDAC 시 신경증상 즉시 보고"],"ix":["효소유도제 상호작용"]},
     "G-CSF":{"alias":"그라신","aes":["골통/근육통","주사부위 반응","드물게 비장비대"],"warn":["좌상복부 통증 시 평가"],"ix":[]},
-    "Hydroxyurea":{"alias":"하이드록시우레아","aes":["골수억제","피부색소침착","궤앙"],"warn":["임신 회피"],"ix":[]},
+    "Hydroxyurea":{"alias":"하이드록시우레아","aes":["골수억제","피부색소침착","궤양"],"warn":["임신 회피"],"ix":[]},
     "Daunorubicin":{"alias":"도우노루비신","aes":["골수억제","심독성","오심/구토","점막염"],"warn":["누적용량 심기능"],"ix":["트라스투주맙 등 심독성↑"]},
     "Idarubicin":{"alias":"이달루비신","aes":["골수억제","심독성","점막염"],"warn":["심기능"],"ix":[]},
     "Mitoxantrone":{"alias":"미토잔트론","aes":["골수억제","심독성","청록색 소변"],"warn":["심기능"],"ix":[]},
@@ -50,7 +49,6 @@ ANTICANCER = {
     "Fludarabine":{"alias":"플루다라빈","aes":["면역억제","감염 위험↑","혈구감소"],"warn":["PCP 예방 고려"],"ix":[]},
     "Vincristine":{"alias":"빈크리스틴","aes":["말초신경병증","변비/장폐색"],"warn":["IT 투여 금지"],"ix":["CYP3A 상호작용"]},
 }
-
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
     "세팔로스포린계":["설사","일부 알코올과 병용 시 플러싱 유사"],
@@ -61,7 +59,6 @@ ABX_GUIDE = {
     "메트로니다졸":["금주","금속맛/구역"],
     "반코마이신":["Red man(주입속도)","신독성(고농도)"],
 }
-
 FOODS = {
     "Albumin_low": ["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
     "K_low": ["바나나","감자","호박죽","고구마","오렌지"],
@@ -69,16 +66,12 @@ FOODS = {
     "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
     "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
 }
-
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
-# ================== INPUT MODE SWITCH ==================
-mode = st.radio("입력 모드", ["표(권장)","텍스트(모바일 초안전)"], horizontal=True)
-
-# ================== DATA ENTRY ==================
+# ================== BUILD DF FROM TEXT ==================
 def build_df_from_text(s):
     vals = [v.strip() for v in s.strip().splitlines() if v.strip()!=""]
-    # Allow comma-separated single line too
+    # Allow comma- or tab-separated single line
     if len(vals)==1 and ("," in vals[0] or "\t" in vals[0]):
         vals = [x.strip() for x in vals[0].replace("\t", ",").split(",")]
     out = []
@@ -90,36 +83,21 @@ def build_df_from_text(s):
         out.append({"항목": name, "값": v})
     return pd.DataFrame(out)
 
+# Placeholder template to show order
 template_lines = "\n".join([f"{i+1:02d}. {name}" for i, name in enumerate(ORDER)])
-text_hint = "\n".join(["값만 한 줄에 하나씩 입력(빈칸 가능).", "쉼표(,)로 한 줄 입력도 가능.", "", template_lines])
+text_hint = "\n".join(["값만 한 줄에 하나씩 입력(빈칸 가능).", "쉼표(,) 한 줄 입력도 가능.", "", template_lines])
 
+# ================== UI: TEXT INPUT ONLY ==================
 with st.form("main_form", clear_on_submit=False):
-    if mode == "표(권장)":
-        if "df" not in st.session_state:
-            st.session_state.df = pd.DataFrame({"항목": ORDER, "값": [None]*len(ORDER)})
-        edited = st.data_editor(
-            st.session_state.df,
-            num_rows="fixed", hide_index=True, use_container_width=True,
-            column_order=["항목","값"],
-            column_config={
-                "항목": st.column_config.Column(disabled=True),
-                "값": st.column_config.NumberColumn(help="수치 입력 (미입력 가능)", step=0.1),
-            },
-            key="grid"
-        )
-        data_df = edited.copy()
-        st.session_state.df = data_df.copy()
-    else:
-        # Textarea mode
-        default_text = ",".join(["" for _ in ORDER])
-        raw = st.text_area("값을 순서대로 입력 (한 줄 하나 또는 쉼표로 구분한 한 줄)", height=180, placeholder=default_text, help=text_hint)
-        data_df = build_df_from_text(raw)
-
-    meds, extras = {}, {}
+    raw = st.text_area("값을 순서대로 입력 (한 줄 하나 또는 쉼표로 한 줄)", height=200,
+                       placeholder="예) 5.2, 11.8, 180, 1200, ...", help=text_hint, key="raw_text")
+    data_df = build_df_from_text(raw)
 
     category = st.radio("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"], key="cat_radio")
 
-    # ---- 항암치료 ----
+    meds, extras = {}, {}
+
+    # 항암치료
     if category == "항암치료":
         st.markdown("### 💊 항암제/보조제")
         if st.checkbox("ARA-C 사용", key="med_arac_use"):
@@ -135,12 +113,12 @@ with st.form("main_form", clear_on_submit=False):
         if st.checkbox("이뇨제 복용 중", key="diuretic_on"):
             extras["diuretic"] = True
 
-    # ---- 항생제 ----
+    # 항생제
     if category == "항생제":
         st.markdown("### 🧪 항생제")
         extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()), key="abx_select")
 
-    # ---- 투석 환자 ----
+    # 투석
     if category == "투석 환자":
         st.markdown("### 🫧 투석 추가 항목")
         extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0, key="dialysis_urine")
@@ -149,7 +127,7 @@ with st.form("main_form", clear_on_submit=False):
         if st.checkbox("이뇨제 복용 중", key="diuretic_on_dial"):
             extras["diuretic"] = True
 
-    # ---- 당뇨 ----
+    # 당뇨
     if category == "당뇨 환자":
         st.markdown("### 🍚 당뇨 지표")
         extras["FPG"] = st.number_input("식전 혈당 (mg/dL)", min_value=0.0, step=1.0, key="dm_fpg")
@@ -231,7 +209,7 @@ if run:
 
     # 발열 가이드 공통
     st.markdown("### 🌡️ 발열 가이드")
-    st.write("38.0~38.5℃ 해열제/경과 · 38.5℃↑ 병원 연락 · 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)")
+    st.write(FEVER_GUIDE)
 
     # 보고서
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n", f"- 카테고리: {category}\n\n"]
@@ -241,7 +219,8 @@ if run:
     st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"), file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md", mime="text/markdown")
 
     # 저장
-    if nickname.strip():
+    nickname = st.session_state.get("nick","").strip()
+    if nickname:
         if st.checkbox("📝 이 별명으로 저장", value=True):
             rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                    "category": category,
