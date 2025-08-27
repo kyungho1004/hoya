@@ -9,7 +9,7 @@ except Exception:
     HAS_PD = False
 
 # ===== 기본 설정 =====
-st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
+st.set_page_config(page_title="피수치 해석 가이드 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기 (v3.1 / Direct Input + 암별 디테일 패널)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
