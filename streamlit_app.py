@@ -13,12 +13,12 @@ except Exception:
 # -------------- Page Setup --------------
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기 (통합본 v2.9+)")
-st.markdown("👤 **제작자: Hoya / 자문: GPT/호야 · 📅 {} 기준".format(date.today().isoformat()))
-if st.button("📌 피수치 가이드 공식카페 바로가기", use_container_width=True):
-    st.markdown('<meta http-equiv="refresh" content="0; url=https://cafe.naver.com/bloodmap" />', unsafe_allow_html=True)
+st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
+
 # -------------- Session State --------------
 if "records" not in st.session_state:
     st.session_state.records = {}
+
 # -------------- Constants --------------
 ORDER = [
     "WBC","Hb","PLT","ANC",
@@ -161,6 +161,7 @@ CANCER_EXTRA_LABS = {
         {"key":"IgA", "label":"IgA (mg/dL)", "type":"num", "step":10.0},
         {"key":"IgM", "label":"IgM (mg/dL)", "type":"num", "step":5.0},
     ],
+    ,
     # ---- SOLID TUMORS ----
     "폐암(NSCLC)": [
         {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
