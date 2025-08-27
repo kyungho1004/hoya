@@ -14,7 +14,8 @@ except Exception:
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기 (통합본 v2.9+)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT/호야 · 📅 {} 기준".format(date.today().isoformat()))
-st.markdown("[📌 피수치 가이드 공식카페 바로가기](https://cafe.naver.com/bloodmap)")
+if st.button("📌 피수치 가이드 공식카페 바로가기", use_container_width=True):
+    st.markdown('<meta http-equiv="refresh" content="0; url=https://cafe.naver.com/bloodmap" />', unsafe_allow_html=True)
 # -------------- Session State --------------
 if "records" not in st.session_state:
     st.session_state.records = {}
