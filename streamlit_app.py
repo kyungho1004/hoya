@@ -13,6 +13,9 @@ except Exception:
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기 (통합본 v2.9++ / Direct Input)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
+# 👇 공식카페 고정 배너
+st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
+
 st.caption("✅ **+ 버튼 없이 직접 타이핑 입력 모드**로 전면 전환했습니다. (모바일 줄꼬임 방지: 기본 세로 / PC 표 모드 선택) · ATRA는 정수, ARA-C는 제형+용량.")
 
 if "records" not in st.session_state:
@@ -347,7 +350,8 @@ if run:
 
     # 보고서 (.md)
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
-           f"- 제작자/자문: Hoya / GPT\n"]
+           f"- 제작자/자문: Hoya / GPT\n",
+           "[피수치 가이드 공식카페](https://cafe.naver.com/bloodmap)\n"]
     if group != "미선택/일반":
         buf.append(f"- 암 그룹/종류: {group} / {cancer}\n")
     else:
@@ -403,5 +407,5 @@ else:
     else:
         st.info("아직 저장된 기록이 없습니다.")
 
-st.caption("📱 **직접 타이핑 입력 모드**(텍스트 입력) 채택으로 +버튼 없이 입력 가능합니다. 모바일 세로 고정으로 줄꼬임 방지, CRP는 0.01 단위 표기.")
-
+# 하단 푸터에도 공식카페 안내
+st.caption("📱 줄꼬임 방지: 모바일 세로 고정, PC 표 모드 제공.  |  📌 공식카페: https://cafe.naver.com/bloodmap")
