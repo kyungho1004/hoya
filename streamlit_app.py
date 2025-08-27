@@ -258,49 +258,11 @@ elif group == "고형암":
     catalog = SOLID[cancer]
 else:
     st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
-
-if catalog:
-    st.markdown(f"🧾 **암종류 노트:** {catalog['note']}")
-    if catalog["extra_tests"]:
-        st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
-
-    # ===== NEW: Clickable sections under cancer info =====
-    meds = {}
-    extras = {}
-
-    with st.expander("💊 항암제 선택", expanded=True):
-        st.markdown("암종류에 맞는 항암제를 선택하세요.")
-        med_list = list(catalog.get("drugs", []))
-        if "ARA-C" in med_list:
-            use = st.checkbox("ARA-C 사용")
-            if use:
-                meds["ARA-C"] = {
-                    "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"]),
-                    "dose": st.number_input("ARA-C 용량/일(임의 입력)", min_value=0.0, step=0.1),
-                }
-            med_list = [d for d in med_list if d != "ARA-C"]
-        for key in med_list:
-            if st.checkbox(f"{key} 사용"):
-                meds[key] = {"dose_or_tabs": st.number_input(f"{key} 투여량/알약 개수(소수 허용)", min_value=0.0, step=0.1)}
-        st.markdown("### 🧪 동반 약물")
-        extras["diuretic"] = st.checkbox("이뇨제 복용 중")
-
-    with st.expander("🧫 항생제 선택", expanded=False):
-        st.caption("해당되는 항생제를 선택하세요.")
-        extras.setdefault("abx", [])
-        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
-
-else:
-    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
     meds = {}
     extras = {}
     extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
-    st.markdown("### 🧫 항생제 (해당 시)")
-    extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
-
-    if catalog["extra_tests"]:
-        st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
-
+    with st.expander("🧫 항생제 선택", expanded=False):
+        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
 
@@ -311,8 +273,12 @@ for name in ORDER:
     elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
         vals[name] = st.number_input(f"{name}", step=1.0)
     else:
-        vals[name] = st.number_input(f"{name}", step=0.1)
-
+    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
+    meds = {}
+    extras = {}
+    extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
+    with st.expander("🧫 항생제 선택", expanded=False):
+        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
 st.divider()
 st.header("3️⃣ 치료/약물 선택")
 
@@ -337,21 +303,12 @@ if catalog:
     st.markdown("### 🧪 동반 약물")
     extras["diuretic"] = st.checkbox("이뇨제 복용 중")
 else:
-    st.caption("암종류 미선택 상태입니다. 아래 일반 옵션만 표시됩니다.")
-    extras["diuretic"] = st.checkbox("이뇨제 복용 중")
-
-st.markdown("### 🧪 항생제 (해당 시)")
-extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
-
-st.markdown("### 🫧 투석 관련 (해당 시)")
-col3, col4, col5 = st.columns(3)
-with col3:
-    extras["hd_today"] = st.checkbox("오늘 투석 시행")
-with col4:
-    extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0)
-with col5:
-    extras["post_hd_weight_delta"] = st.number_input("투석 후 체중 변화 (kg)", min_value=-10.0, max_value=10.0, step=0.1)
-
+    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
+    meds = {}
+    extras = {}
+    extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
+    with st.expander("🧫 항생제 선택", expanded=False):
+        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
 st.divider()
 col_run1, col_run2 = st.columns(2)
 with col_run1:
@@ -460,4 +417,3 @@ else:
         st.info("아직 저장된 기록이 없습니다.")
 
 st.caption("✅ 모바일/PC 모두 한 줄 한 줄 **세로 정렬** 고정. CRP는 0.01 단위로 입력됩니다.")
-
