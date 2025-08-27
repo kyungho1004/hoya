@@ -50,6 +50,17 @@ ORDER = [
     "CRP","Cr","Uric Acid","Total Bilirubin","BUN","BNP"
 ]
 
+# 각 항목별 표시 형식(소수 자릿수)과 step 설정
+FORMAT_MAP = {
+    "WBC":"%.1f","Hb":"%.1f","PLT":"%.0f","ANC":"%.0f",
+    "Ca":"%.1f","P":"%.1f","Na":"%.1f","K":"%.1f","Albumin":"%.1f",
+    "Glucose":"%.0f","Total Protein":"%.1f","AST":"%.0f","ALT":"%.0f","LDH":"%.0f",
+    "CRP":"%.2f","Cr":"%.1f","Uric Acid":"%.1f","Total Bilirubin":"%.1f","BUN":"%.1f","BNP":"%.0f"
+}
+STEP_MAP = {k: (1.0 if FORMAT_MAP[k] == "%.0f" else 0.1) for k in FORMAT_MAP}
+# CRP는 0.01 단위로 세밀하게 입력
+STEP_MAP["CRP"] = 0.01
+
 # 약물/가이드 데이터 (요약)
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
@@ -207,20 +218,69 @@ def estimate_anc_500_date(records: List[Dict]) -> Optional[str]:
     except Exception:
         return None
 
+
 def build_report_pdf(text: str) -> bytes:
+    """PDF 생성: 가능한 경우 한글 글꼴 등록 후 사용."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.rl_config import TTFSearchPath
+    import os
+
+    # 후보 글꼴 경로
+    candidates = [
+        "NanumGothic.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+        "Malgun Gothic.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJKkr-Regular.otf",
+    ]
+    font_name = None
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont("KR", path))
+                font_name = "KR"
+                break
+            except Exception:
+                continue
+
     packet = io.BytesIO()
     c = canvas.Canvas(packet, pagesize=A4)
     width, height = A4
     x, y = 40, height - 40
-    for line in text.splitlines():
+    try:
+        if font_name:
+            c.setFont(font_name, 10)
+        else:
+            c.setFont("Helvetica", 10)
+    except Exception:
+        pass
+
+    for raw in text.splitlines():
+        line = raw
+        if not font_name:
+            # 폰트가 없으면 라틴만 안전하게 출력
+            try:
+                line = raw.encode("latin-1", "ignore").decode("latin-1")
+            except Exception:
+                line = "".join(ch if ord(ch) < 128 else " " for ch in raw)
         c.drawString(x, y, line[:110])
         y -= 14
         if y < 40:
             c.showPage()
+            try:
+                if font_name:
+                    c.setFont(font_name, 10)
+                else:
+                    c.setFont("Helvetica", 10)
+            except Exception:
+                pass
             y = height - 40
     c.save()
     packet.seek(0)
     return packet.read()
+
 
 # ----------------------------- UI -----------------------------
 st.divider()
@@ -381,7 +441,7 @@ labs: Dict[str, Optional[float]] = {k: None for k in ORDER}
 if mode == "개별 입력":
     st.markdown("🧪 각 항목을 순서대로 입력하세요. (입력한 항목만 결과에 표시)")
     for k in ORDER:
-        labs[k] = st.number_input(k, value=None, placeholder="값 입력", step=0.1, format="%.3f")
+        labs[k] = st.number_input(k, value=None, placeholder="값 입력", step=STEP_MAP.get(k, 0.1), format=FORMAT_MAP.get(k, "%.1f"))
 else:
     st.markdown("🧾 줄바꿈 또는 쉼표로 구분하여 순서대로 붙여넣으세요.")
     st.code(", ".join(ORDER), language="text")
@@ -468,7 +528,7 @@ if run:
                            file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                            mime="application/pdf")
     else:
-        st.caption("PDF 다운로드는 reportlab 설치 시 활성화됩니다.")
+        st.caption("PDF 다운로드는 reportlab 설치 시 활성화됩니다. (한글이 깨지면 시스템에 Nanum/Noto/AppleSD 고딕 폰트가 필요해요)")
 
     if name:
         if st.checkbox("📝 이 별명으로 저장", value=True):
@@ -507,3 +567,4 @@ else:
 
 st.markdown("---")
 st.caption(f"뷰 카운트(세션): {st.session_state.view_count} · v2.9 (카테고리 상단 이동 적용)")
+
