@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-피수치 자동 해석기 - v2.9 통합본 + 즉시반영 세트 (클린 빌드)
-- 레짐 프리셋(혈액암 + 고형암 자동 체크)
-- 약물 상호작용 배지(QT↑/신독성↑/출혈 위험/골수억제)
-- 사용자 임계값 경고 배너 + 상단 3줄 요약
-- 캡슐/정 약물은 '개수(정수)' 입력 (ATRA/6-MP/Hydroxyurea/Capecitabine)
-- 모바일 줄꼬임 방지, 보고서 파일명 'bloodmap_별명_YYYYMMDD'
+피수치 자동 해석기 - v2.9 통합본 + ⚡즉시반영 세트
+(레짐 프리셋 / 상호작용 배지 / 임계값 배너 / 상단 3줄 요약 / 파일명 개선)
+
+- 모바일 줄꼬임 해결(단일 폼/단일 컬럼 고정)
+- 항암제 14종(+ ARA-C 제형), 항생제 카테고리, 투석/당뇨 서브폼
+- 입력한 수치만 결과에 표시, CRP 0.01 단위
+- .md / .txt / .pdf 보고서 다운로드(ReportLab)
+- 별명별 저장 및 추이 그래프(WBC, Hb, PLT, CRP, ANC)
+- 암종류 선택(혈액암 5종 + 고형암군 + 육종) → 검사 힌트
+- ✅새로 추가: 레짐 프리셋, 약물 상호작용 배지, 사용자 임계값, 요약 카드, 파일명에 별명/날짜 포함
+
+필요 패키지: streamlit>=1.36, reportlab>=3.6, pandas(선택)
 """
+
 from io import BytesIO
 from datetime import datetime, date
+import json
+
 import streamlit as st
 
 # Optional pandas (for charts)
@@ -36,7 +45,7 @@ st.markdown("👤 **제작자: Hoya / 자문: GPT**")
 
 # 페이지 조회수(간단 카운터)
 st.session_state.setdefault("page_views", 0)
-st.session_state["page_views"] += 1
+st.session_state.page_views += 1
 
 # 별명별 기록 저장소
 st.session_state.setdefault("records", {})  # {nickname: [ {ts, category, cancer, labs, meds, extras, preset} ]}
@@ -66,8 +75,7 @@ ANTICANCER = {
     "Topotecan":{"alias":"토포테칸","aes":["골수억제","설사"],"warn":[],"ix":[]},
     "Fludarabine":{"alias":"플루다라빈","aes":["면역억제","감염 위험↑","혈구감소"],"warn":["PCP 예방 고려"],"ix":[]},
     "Vincristine":{"alias":"빈크리스틴","aes":["말초신경병증","변비/장폐색"],"warn":["척수강내(IT) 투여 금지"],"ix":["CYP3A 상호작용"]},
-
-    # --- 고형암 약물 ---
+    
     "Paclitaxel":{"alias":"파클리탁셀","aes":["말초신경병증","탈모","골수억제"],"warn":["과민반응 전처치"],"ix":[]},
     "Docetaxel":{"alias":"도세탁셀","aes":["골수억제","부종","손발저림"],"warn":["스테로이드 전처치"],"ix":[]},
     "Cisplatin":{"alias":"시스플라틴","aes":["신독성","구토","이독성"],"warn":["수분·이뇨요법"],"ix":[]},
@@ -82,7 +90,6 @@ ANTICANCER = {
     "Ifosfamide":{"alias":"이포스파마이드","aes":["출혈성 방광염","신경독성","골수억제"],"warn":["메스나·수분"],"ix":[]},
     "Trastuzumab":{"alias":"트라스투주맙","aes":["심기능 저하"],"warn":["LVEF 모니터"],"ix":[]}
 }
-
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
     "세팔로스포린계":["설사","일부 알코올 병용 시 플러싱 유사 반응"],
@@ -94,7 +101,7 @@ ABX_GUIDE = {
     "반코마이신":["Red man(주입속도)","신독성(고농도)"]
 }
 
-# 정/캡슐 약물(정수 입력)
+# 💊 정/캡슐 위주 약물(개수 입력)
 PILL_MEDS = ["ATRA", "6-MP", "Hydroxyurea", "Capecitabine"]
 
 FOODS = {
@@ -123,15 +130,15 @@ CANCER_HINT = {
     "육종(Soft tissue/Bone)": "도세/이포스/독소루비신 등 레짐 독성 주의(교육용)."
 }
 
-# -------------------- 레짐 프리셋 --------------------
+# -------------------- 새로 추가: 레짐 프리셋 --------------------
+# 주: 현재 자동 체크는 데이터에 존재하는 항암제 key만 반영
 REGIMEN_PRESETS = {
-    # 혈액암
     "AML": {
         "7+3 (ARA-C + Daunorubicin)": {"ARA-C": {"form": "정맥(IV)", "dose": 0.0}, "Daunorubicin": {"dose_or_tabs": 0.0}},
         "Idarubicin + ARA-C": {"ARA-C": {"form": "정맥(IV)", "dose": 0.0}, "Idarubicin": {"dose_or_tabs": 0.0}}
     },
     "APL": {
-        "ATRA + Idarubicin": {"ATRA": {"dose_or_tabs": 1}, "Idarubicin": {"dose_or_tabs": 0.0}}
+        "ATRA + Idarubicin": {"ATRA": {"dose_or_tabs": 0.0}, "Idarubicin": {"dose_or_tabs": 0.0}}
     },
     "ALL": {
         "VCR + MTX + Cyclo": {"Vincristine": {"dose_or_tabs": 0.0}, "MTX": {"dose_or_tabs": 0.0}, "Cyclophosphamide": {"dose_or_tabs": 0.0}}
@@ -140,10 +147,9 @@ REGIMEN_PRESETS = {
         "Fludarabine + Cyclophosphamide": {"Fludarabine": {"dose_or_tabs": 0.0}, "Cyclophosphamide": {"dose_or_tabs": 0.0}}
     },
     "CML": {
-        "Hydroxyurea 지혈적": {"Hydroxyurea": {"dose_or_tabs": 1}}
+        "Hydroxyurea 지혈적": {"Hydroxyurea": {"dose_or_tabs": 0.0}}
     },
 
-    # 고형암
     "NSCLC": {
         "Carboplatin + Paclitaxel": {"Carboplatin": {"dose_or_tabs": 0.0}, "Paclitaxel": {"dose_or_tabs": 0.0}},
         "Cisplatin + Pemetrexed": {"Cisplatin": {"dose_or_tabs": 0.0}, "Pemetrexed": {"dose_or_tabs": 0.0}}
@@ -182,15 +188,18 @@ SOLID_MAP = {
 }
 
 # -------------------- HELPERS --------------------
+
 def entered(v):
     try:
         return v is not None and float(v) > 0
     except Exception:
         return False
 
+
 def interpret_labs(l):
     out = []
-    def add(s): out.append("- " + s)
+    def add(s):
+        out.append("- " + s)
 
     if entered(l.get("WBC")):
         w = l["WBC"]
@@ -221,6 +230,7 @@ def interpret_labs(l):
             add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
     return out
 
+
 def summarize_meds(meds: dict):
     out = []
     for k, v in meds.items():
@@ -236,6 +246,7 @@ def summarize_meds(meds: dict):
             line += f" | 제형: {v['form']}"
         out.append(line)
     return out
+
 
 def food_suggestions(l):
     foods = []
@@ -254,13 +265,14 @@ def food_suggestions(l):
     foods.append(IRON_WARN)
     return foods
 
-# 위험 배지
+# -------------------- 약물 상호작용/위험 배지 --------------------
 RISK_TAGS = {
     "QT↑": lambda meds, abx: any(x in (abx or []) for x in ["마크롤라이드","플루오로퀴놀론"]),
-    "신독성↑": lambda meds, abx: "반코마이신" in (abx or []) or ("MTX" in meds),
+    "신독성↑": lambda meds, abx: "반코마이신" in (abx or []) or ("MTX" in meds and entered(meds["MTX"].get("dose_or_tabs", 0.0))),
     "출혈 위험": lambda meds, abx: "Cyclophosphamide" in meds,
-    "골수억제": lambda meds, abx: any(k in meds for k in ["6-MP","MTX","ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","Etoposide","Topotecan","Fludarabine","Hydroxyurea","Vincristine","Cyclophosphamide","Paclitaxel","Docetaxel","Irinotecan","5-FU","Capecitabine"])
+    "골수억제": lambda meds, abx: any(k in meds for k in ["6-MP","MTX","ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","Etoposide","Topotecan","Fludarabine","Hydroxyurea","Vincristine","Cyclophosphamide"]),
 }
+
 def collect_risk_badges(meds, abx_list):
     badges = []
     for tag, fn in RISK_TAGS.items():
@@ -271,7 +283,7 @@ def collect_risk_badges(meds, abx_list):
             pass
     return badges
 
-# 사용자 임계값
+# -------------------- 사용자 임계값 --------------------
 st.session_state.setdefault("thresholds", {"ANC": 500.0, "Hb": 8.0, "PLT": 50.0, "CRP": 0.5})
 
 # -------------------- UI --------------------
@@ -283,13 +295,14 @@ with colA:
 with colB:
     exam_date = st.date_input("검사 날짜", value=date.today())
 
-# 암종류 + 고형암 세부
+# 암종류 (혈액암5 + 고형암 + 육종)
 cancer = st.selectbox("암 종류를 선택하세요", CANCERS, index=0, help="선택 시 관련 검사 힌트를 표기합니다.")
+# 고형암이면 세부 선택 노출
 solid_detail = None
 preset_key = None
 if cancer == "고형암(폐/유방/대장 등)":
-    solid_detail = st.selectbox("고형암 세부", ["폐암(NSCLC)","유방암","대장암","위암","간암(HCC)","췌장암"])
-    preset_key = {"폐암(NSCLC)":"NSCLC","유방암":"Breast","대장암":"CRC","위암":"Gastric","간암(HCC)":"HCC","췌장암":"Pancreas"}[solid_detail]
+    solid_detail = st.selectbox("고형암 세부", SOLID_SUBTYPES)
+    preset_key = SOLID_MAP.get(solid_detail)
 elif cancer == "육종(Soft tissue/Bone)":
     preset_key = "Sarcoma"
 else:
@@ -297,53 +310,71 @@ else:
 
 if cancer in CANCER_HINT:
     st.info(f"🔎 검사 힌트: {CANCER_HINT[cancer]}")
+f"🔎 검사 힌트: {CANCER_HINT[cancer]}")
 
-# 레짐 프리셋
+# 레짐 프리셋 선택(암종류/세부에 따라)
 preset_name = None
 if preset_key in REGIMEN_PRESETS:
     preset_name = st.selectbox("레짐 프리셋(선택)", ["(선택 안 함)"] + list(REGIMEN_PRESETS[preset_key].keys()))
 else:
     st.selectbox("레짐 프리셋(선택)", ["(해당 없음)"])
 
+# --- 💊 약물 입력(선택, 카테고리 무관) ---
+meds = st.session_state.get("meds_any", {})
+with st.container(border=True):
+    st.subheader("💊 약물 입력(선택) — 카테고리 선택 없이 사용 가능")
+    # 프리셋 자동 로드(암종류/세부 기반)
+    if 'preset_key' in locals() and preset_key in REGIMEN_PRESETS:
+        preset_name_global = st.selectbox("레짐 프리셋(선택)", ["(선택 안 함)"] + list(REGIMEN_PRESETS[preset_key].keys()), key="preset_global")
+        if preset_name_global and preset_name_global != "(선택 안 함)":
+            if st.button("프리셋 자동 로드", key="btn_preset_global"):
+                for k, v in REGIMEN_PRESETS[preset_key][preset_name_global].items():
+                    meds[k] = v.copy()
+                st.success(f"프리셋 적용: {preset_name_global}")
+    else:
+        st.caption("현재 선택한 암종류/세부에 해당하는 프리셋이 없습니다.")
+
+    # ARA-C 별도 제형
+    if st.checkbox("ARA-C 사용", key="use_ARAC_global"):
+        meds.setdefault("ARA-C", {})
+        meds["ARA-C"]["form"] = st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ARAC_form_global")
+        meds["ARA-C"]["dose"] = st.number_input("ARA-C 용량/일(임의)", min_value=0.0, step=0.1, key="ARAC_dose_global")
+
+    colsG = st.columns(3)
+    keysG = [
+        "6-MP","MTX","ATRA","G-CSF","Hydroxyurea","Daunorubicin","Idarubicin",
+        "Mitoxantrone","Cyclophosphamide","Etoposide","Topotecan","Fludarabine","Vincristine",
+        "Paclitaxel","Docetaxel","Cisplatin","Carboplatin","Oxaliplatin","Pemetrexed",
+        "Gemcitabine","5-FU","Capecitabine","Irinotecan","Doxorubicin","Ifosfamide","Trastuzumab"
+    ]
+    for i, key in enumerate(keysG):
+        with colsG[i % 3]:
+            if st.checkbox(f"{key} 사용", key=f"use_{key}_global"):
+                meds.setdefault(key, {})
+                if key in PILL_MEDS:
+                    meds[key]["dose_or_tabs"] = st.number_input(f"{key} 캡슐/정 개수", min_value=1, step=1, value=1, key=f"dose_{key}_global")
+                else:
+                    meds[key]["dose_or_tabs"] = st.number_input(f"{key} 용량(임의)", min_value=0.0, step=0.1, key=f"dose_{key}_global")
+
+# 세션에 보관하여 아래 해석 단계에서 사용
+st.session_state["meds_any"] = meds
+
 st.divider()
 st.header("2️⃣ 해석 카테고리 & 약물/상태")
 category = st.radio("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"], horizontal=True)
 
-meds, extras = {}, {}
+# 서브 섹션
+meds = st.session_state.get("meds_any", {})
+extras = {}
 if category == "항암치료":
     with st.container(border=True):
-        st.markdown("### 💊 항암제/보조제")
-        # 프리셋 자동 로드
-        if preset_name and preset_name != "(선택 안 함)":
-            if st.button("프리셋 자동 로드"):
-                for k, v in REGIMEN_PRESETS[preset_key][preset_name].items():
-                    meds[k] = v.copy()
-                st.success(f"프리셋 적용: {preset_name}")
-        # 개별 선택
-        if st.checkbox("ARA-C 사용"):
-            meds.setdefault("ARA-C", {})
-            meds["ARA-C"]["form"] = st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"])
-            meds["ARA-C"]["dose"] = st.number_input("ARA-C 용량/일(임의)", min_value=0.0, step=0.1)
-        cols = st.columns(3)
-        keys = [
-            "6-MP","MTX","ATRA","G-CSF","Hydroxyurea","Daunorubicin","Idarubicin",
-            "Mitoxantrone","Cyclophosphamide","Etoposide","Topotecan","Fludarabine","Vincristine",
-            "Paclitaxel","Docetaxel","Cisplatin","Carboplatin","Oxaliplatin","Pemetrexed",
-            "Gemcitabine","5-FU","Capecitabine","Irinotecan","Doxorubicin","Ifosfamide","Trastuzumab"
-        ]
-        for i, key in enumerate(keys):
-            with cols[i % 3]:
-                if st.checkbox(f"{key} 사용", key=f"use_{key}"):
-                    meds.setdefault(key, {})
-                    if key in PILL_MEDS:
-                        meds[key]["dose_or_tabs"] = st.number_input(f"{key} 캡슐/정 개수", min_value=1, step=1, value=1, key=f"dose_{key}")
-                    else:
-                        meds[key]["dose_or_tabs"] = st.number_input(f"{key} 용량(임의)", min_value=0.0, step=0.1, key=f"dose_{key}")
-        if st.checkbox("이뇨제 복용 중"):
+        st.info("상단의 \"💊 약물 입력(선택)\" 섹션에서 항암제를 추가하세요. 여기서는 보조 옵션만 표시합니다.")
+        if st.checkbox("이뇨제 복용 중", key="diuretic_support"):
             extras["diuretic"] = True
         st.info(FEVER_GUIDE)
 
 elif category == "항생제":
+
     with st.container(border=True):
         st.markdown("### 🧪 항생제")
         extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
@@ -367,7 +398,7 @@ elif category == "당뇨 환자":
 
 # 사용자 임계값 설정
 with st.expander("⚙️ 사용자 임계값 설정(배너 경고)"):
-    th = st.session_state["thresholds"]
+    th = st.session_state.thresholds
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         th["ANC"] = st.number_input("ANC 경고 미만", min_value=0.0, value=float(th["ANC"]), step=50.0)
@@ -381,7 +412,9 @@ with st.expander("⚙️ 사용자 임계값 설정(배너 경고)"):
 st.divider()
 st.header("3️⃣ 혈액 검사 수치 입력 (입력한 값만 사용)")
 
+# 단일 폼으로 묶어 모바일 재렌더 꼬임 방지
 with st.form("labs_form"):
+    # 단일 컬럼, 순서 고정
     WBC = st.number_input("WBC (백혈구)", min_value=0.0, step=0.1)
     Hb = st.number_input("Hb (혈색소)", min_value=0.0, step=0.1)
     PLT = st.number_input("PLT (혈소판)", min_value=0.0, step=1.0)
@@ -402,6 +435,7 @@ with st.form("labs_form"):
     TB = st.number_input("Total Bilirubin (TB)", min_value=0.0, step=0.1)
     BUN = st.number_input("BUN", min_value=0.0, step=0.1)
     BNP = st.number_input("BNP (선택)", min_value=0.0, step=1.0)
+
     run = st.form_submit_button("🔎 해석하기", use_container_width=True)
 
 # -------------------- RUN --------------------
@@ -414,17 +448,13 @@ if run:
         "Cr": Cr, "UA": UA, "TB": TB, "BUN": BUN, "BNP": BNP
     }
 
-    # 상단 3줄 요약
-    th = st.session_state["thresholds"]
+    # ---------- 상단 3줄 요약 카드 ----------
+    th = st.session_state.thresholds
     alerts = []
-    if entered(ANC) and ANC < th["ANC"]:
-        alerts.append("ANC 낮음")
-    if entered(Hb) and Hb < th["Hb"]:
-        alerts.append("Hb 낮음")
-    if entered(PLT) and PLT < th["PLT"]:
-        alerts.append("혈소판 낮음")
-    if entered(CRP) and CRP > th["CRP"]:
-        alerts.append("CRP 상승")
+    if entered(ANC) and ANC < th["ANC"]: alerts.append("ANC 낮음")
+    if entered(Hb) and Hb < th["Hb"]: alerts.append("Hb 낮음")
+    if entered(PLT) and PLT < th["PLT"]: alerts.append("혈소판 낮음")
+    if entered(CRP) and CRP > th["CRP"]: alerts.append("CRP 상승")
 
     action_lines = []
     if "ANC 낮음" in alerts:
@@ -445,12 +475,12 @@ if run:
         st.write(" • 권장: " + (" / ".join(action_lines) if action_lines else "일상 관찰"))
         st.write(" • 카테고리/암종류: " + f"{category} / {cancer}")
 
-    # 상세 해석
+    # ---------- 상세 해석 ----------
     st.subheader("📋 해석 결과")
     lines = interpret_labs(labs)
     if lines:
-        for x in lines:
-            st.write(x)
+        for line in lines:
+            st.write(line)
     else:
         st.info("입력된 수치가 없습니다.")
 
@@ -483,8 +513,9 @@ if run:
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
-    # 보고서 생성
+    # ---------- 보고서 ----------
     def build_report_text(name, d, cancer, category, labs, lines, meds, extras, preset_name):
+        # 입력된 값만 정리
         lab_lines = []
         for k in ORDER:
             v = labs.get(k)
@@ -498,6 +529,7 @@ if run:
         if extras.get("abx"):
             for a in extras["abx"]:
                 abx_lines.append(f"• {a}: {', '.join(ABX_GUIDE[a])}")
+
         txt = [
             f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})",
             f"- 환자: {name or '미기입'}",
@@ -505,56 +537,87 @@ if run:
             f"- 카테고리: {category}",
             f"- 암종류: {cancer}",
             f"- 레짐 프리셋: {preset_name or '(선택 없음)'}",
-            "\n## 입력 수치",
+            "
+## 입력 수치",
             *(lab_lines or ["- (입력 값 없음)"]),
-            "\n## 해석 요약",
+            "
+## 해석 요약",
             *(lines or ["- (해석할 값 없음)"]),
-            "\n## 음식 가이드",
+            "
+## 음식 가이드",
             *(food_suggestions(labs) or ["- (권장 없음)"]),
-            "\n## 약물 요약",
+            "
+## 약물 요약",
             *(meds_lines or ["- (해당 없음)"]),
-            "\n## 항생제 주의",
+            "
+## 항생제 주의",
             *(abx_lines or ["- (해당 없음)"]),
-            "\n## 발열 가이드",
-            FEVER_GUIDE
+            "
+## 발열 가이드",
+            FEVER_GUIDE,
         ]
-        return "\n".join(txt)
+        return "
+".join(txt)
 
     report_text = build_report_text(nickname, exam_date, cancer, category, labs, lines, meds, extras, preset_name)
+
+    # 파일명 개선(별명+날짜 포함)
     file_stub = f"bloodmap_{(nickname or 'noname')}_{exam_date.strftime('%Y%m%d')}"
 
-    # 다운로드
-    st.download_button("📥 보고서(.md) 다운로드", data=report_text.encode("utf-8"), file_name=f"{file_stub}.md", mime="text/markdown", use_container_width=True)
-    st.download_button("📥 보고서(.txt) 다운로드", data=report_text.encode("utf-8"), file_name=f"{file_stub}.txt", mime="text/plain", use_container_width=True)
+    # .md
+    st.download_button(
+        "📥 보고서(.md) 다운로드",
+        data=report_text.encode("utf-8"),
+        file_name=f"{file_stub}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
+    # .txt
+    st.download_button(
+        "📥 보고서(.txt) 다운로드",
+        data=report_text.encode("utf-8"),
+        file_name=f"{file_stub}.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
+    # .pdf (옵션)
     if HAS_PDF:
         def make_pdf(text: str) -> bytes:
             buf = BytesIO()
             c = canvas.Canvas(buf, pagesize=A4)
-            x, y = 20*mm, A4[1] - 20*mm
+            width, height = A4
+            x, y = 20*mm, height - 20*mm
             try:
                 pdfmetrics.registerFont(TTFont('Nanum', 'NanumGothic.ttf'))
                 c.setFont('Nanum', 10)
             except Exception:
                 c.setFont('Helvetica', 10)
-            for line in text.split("\n"):
+            for line in text.split("
+"):
                 if y < 20*mm:
                     c.showPage()
                     try:
                         c.setFont('Nanum', 10)
                     except Exception:
                         c.setFont('Helvetica', 10)
-                    y = A4[1] - 20*mm
-                c.drawString(20*mm, y, line)
+                    y = height - 20*mm
+                c.drawString(x, y, line)
                 y -= 12
             c.save()
             buf.seek(0)
             return buf.read()
         pdf_bytes = make_pdf(report_text)
-        st.download_button("📥 보고서(.pdf) 다운로드", data=pdf_bytes, file_name=f"{file_stub}.pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(
+            "📥 보고서(.pdf) 다운로드",
+            data=pdf_bytes,
+            file_name=f"{file_stub}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
     else:
         st.caption("PDF 생성을 위해서는 reportlab 설치가 필요합니다: pip install reportlab")
 
-    # 저장
+    # ---------- 저장 ----------
     if nickname.strip():
         if st.checkbox("📝 이 별명으로 저장", value=True):
             rec = {
@@ -564,9 +627,9 @@ if run:
                 "preset": preset_name,
                 "labs": {k: v for k, v in labs.items() if entered(v)},
                 "meds": meds,
-                "extras": extras
+                "extras": extras,
             }
-            st.session_state["records"].setdefault(nickname, []).append(rec)
+            st.session_state.records.setdefault(nickname, []).append(rec)
             st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
@@ -577,9 +640,9 @@ st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
 if not HAS_PD:
     st.info("그래프는 pandas 설치 시 활성화됩니다. (pip install pandas)")
 else:
-    if st.session_state["records"]:
-        sel = st.selectbox("별명 선택", sorted(st.session_state["records"].keys()))
-        rows = st.session_state["records"].get(sel, [])
+    if st.session_state.records:
+        sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
+        rows = st.session_state.records.get(sel, [])
         if rows:
             data = [{"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC","Hb","PLT","CRP","ANC"]}} for r in rows]
             df = pd.DataFrame(data).set_index("ts")
@@ -589,4 +652,4 @@ else:
     else:
         st.info("아직 저장된 기록이 없습니다.")
 
-st.markdown(f"👁️ 조회수: **{st.session_state['page_views']}**")
+st.markdown(f"👁️ 조회수: **{st.session_state.page_views}**")
