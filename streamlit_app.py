@@ -3,20 +3,12 @@ import json
 from datetime import datetime, date
 import streamlit as st
 
-# Optional libs
+# Optional pandas (for charts). App runs without it.
 try:
     import pandas as pd
     HAS_PD = True
 except Exception:
     HAS_PD = False
-
-try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.units import mm
-    HAS_PDF = True
-except Exception:
-    HAS_PDF = False
 
 # -------------- Page Setup --------------
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
@@ -36,8 +28,7 @@ ORDER = [
     "Cr","UA","TB","BUN","BNP"
 ]
 
-# ---------- Domain Data (editable via external JSON if desired) ----------
-ANTICANCER = json.loads(st.secrets.get("ANTICANCER_JSON", "{}")) or {
+ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
     "ATRA":{"alias":"트레티노인(베사노이드)","aes":["분화증후군","발열","피부/점막 건조","두통"],"warn":["분화증후군 의심 시 즉시 병원"],"ix":["테트라사이클린계와 가성뇌종양"]},
@@ -67,7 +58,7 @@ ANTICANCER = json.loads(st.secrets.get("ANTICANCER_JSON", "{}")) or {
     "Ifosfamide":{"alias":"이포스파미드","aes":["골수억제","신경독성","출혈성 방광염"],"warn":["메스나 병용/수분섭취"],"ix":[]},
 }
 
-ABX_GUIDE = json.loads(st.secrets.get("ABX_JSON", "{}")) or {
+ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
     "세팔로스포린계":["설사","일부 알코올과 병용 시 플러싱 유사"],
     "마크롤라이드":["QT 연장","CYP 상호작용(클라리스/에리쓰)"],
@@ -78,7 +69,7 @@ ABX_GUIDE = json.loads(st.secrets.get("ABX_JSON", "{}")) or {
     "반코마이신":["Red man(주입속도)","신독성(고농도)"],
 }
 
-FOODS = json.loads(st.secrets.get("FOODS_JSON", "{}")) or {
+FOODS = {
     "Albumin_low": ["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
     "K_low": ["바나나","감자","호박죽","고구마","오렌지"],
     "Hb_low": ["소고기","시금치","두부","달걀 노른자","렌틸콩"],
@@ -87,70 +78,22 @@ FOODS = json.loads(st.secrets.get("FOODS_JSON", "{}")) or {
 }
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
-HEMATO = json.loads(st.secrets.get("HEMATO_JSON", "{}")) or {
-    "AML": {
-        "note": "ANC 최우선 모니터링, Ara-C 사용 시 간/신장 수치 주의",
-        "extra_tests": ["PT", "aPTT", "Fibrinogen"],
-        "drugs": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","Vincristine","MTX","ATRA"],
-    },
-    "APL": {
-        "note": "DIC 동반 위험: PT/aPTT/피브리노겐, D-dimer; 분화증후군 주의",
-        "extra_tests": ["PT", "aPTT", "Fibrinogen", "D-dimer", "DIC Score"],
-        "drugs": ["ATRA","ARA-C","Idarubicin","Daunorubicin","G-CSF","Hydroxyurea"],
-    },
-    "ALL": {
-        "note": "CNS prophylaxis(IT MTX 등) 고려; 빈혈/혈소판 주기적 점검",
-        "extra_tests": ["PT", "aPTT"],
-        "drugs": ["Vincristine","MTX","Cyclophosphamide","Daunorubicin","ARA-C","G-CSF","Etopopside","Topotecan","Fludarabine","Hydroxyurea"],
-    },
-    "CML": {
-        "note": "WBC↑↑ 가능, LDH↑; BCR-ABL PCR 추적",
-        "extra_tests": ["BCR-ABL PCR"],
-        "drugs": ["Hydroxyurea","Cyclophosphamide","ARA-C","G-CSF"],
-    },
-    "CLL": {
-        "note": "림프구 비율↑, 저감마글로불린혈증 가능",
-        "extra_tests": ["면역글로불린"],
-        "drugs": ["Fludarabine","Cyclophosphamide","Mitoxantrone","Etoposide","Hydroxyurea","G-CSF"],
-    },
+HEMATO = {
+    "AML": {"note":"ANC 최우선 모니터링, Ara-C 사용 시 간/신장 수치 주의","extra_tests":["PT","aPTT","Fibrinogen"],"drugs":["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","Vincristine","MTX","ATRA"]},
+    "APL": {"note":"DIC 동반 위험: PT/aPTT/피브리노겐, D-dimer; 분화증후군 주의","extra_tests":["PT","aPTT","Fibrinogen","D-dimer","DIC Score"],"drugs":["ATRA","ARA-C","Idarubicin","Daunorubicin","G-CSF","Hydroxyurea"]},
+    "ALL": {"note":"CNS prophylaxis(IT MTX 등) 고려; 빈혈/혈소판 주기적 점검","extra_tests":["PT","aPTT"],"drugs":["Vincristine","MTX","Cyclophosphamide","Daunorubicin","ARA-C","G-CSF","Etoposide","Topotecan","Fludarabine","Hydroxyurea"]},
+    "CML": {"note":"WBC↑↑ 가능, LDH↑; BCR-ABL PCR 추적","extra_tests":["BCR-ABL PCR"],"drugs":["Hydroxyurea","Cyclophosphamide","ARA-C","G-CSF"]},
+    "CLL": {"note":"림프구 비율↑, 저감마글로불린혈증 가능","extra_tests":["면역글로불린"],"drugs":["Fludarabine","Cyclophosphamide","Mitoxantrone","Etoposide","Hydroxyurea","G-CSF"]},
 }
 
-SOLID = json.loads(st.secrets.get("SOLID_JSON", "{}")) or {
-    "폐암(NSCLC)": {
-        "note": "간/신장 수치와 호중구 모니터",
-        "extra_tests": [],
-        "drugs": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine","5-FU"],
-    },
-    "유방암": {
-        "note": "심기능 모니터(안트라사이클린/트라스투주맙)",
-        "extra_tests": [],
-        "drugs": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Carboplatin","Trastuzumab"],
-    },
-    "대장암": {
-        "note": "옥살리플라틴 말초신경, 5-FU/Capecitabine 수족증후군",
-        "extra_tests": [],
-        "drugs": ["Oxaliplatin","5-FU","Capecitabine","Irinotecan"],
-    },
-    "위암": {
-        "note": "백금계+플루오로피리미딘 조합 흔함",
-        "extra_tests": [],
-        "drugs": ["Cisplatin","Carboplatin","5-FU","Capecitabine","Paclitaxel","Docetaxel"],
-    },
-    "간암(HCC)": {
-        "note": "간기능 악화 위험; 간수치·빌리루빈 면밀 확인",
-        "extra_tests": [],
-        "drugs": ["Doxorubicin","Cisplatin","5-FU","Gemcitabine"],
-    },
-    "췌장암": {
-        "note": "혈구감소/영양 저하 위험; 전신 상태 관찰",
-        "extra_tests": [],
-        "drugs": ["Gemcitabine","5-FU","Oxaliplatin","Irinotecan","Capecitabine"],
-    },
-    "육종(Sarcoma)": {
-        "note": "안트라사이클린 기반 많이 사용",
-        "extra_tests": [],
-        "drugs": ["Doxorubicin","Ifosfamide","Cyclophosphamide","Gemcitabine","Docetaxel","Paclitaxel"],
-    },
+SOLID = {
+    "폐암(NSCLC)": {"note":"간/신장 수치와 호중구 모니터","extra_tests":[],"drugs":["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine","5-FU"]},
+    "유방암": {"note":"심기능 모니터(안트라사이클린/트라스투주맙)","extra_tests":[],"drugs":["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Carboplatin","Trastuzumab"]},
+    "대장암": {"note":"옥살리플라틴 말초신경, 5-FU/Capecitabine 수족증후군","extra_tests":[],"drugs":["Oxaliplatin","5-FU","Capecitabine","Irinotecan"]},
+    "위암": {"note":"백금계+플루오로피리미딘 조합 흔함","extra_tests":[],"drugs":["Cisplatin","Carboplatin","5-FU","Capecitabine","Paclitaxel","Docetaxel"]},
+    "간암(HCC)": {"note":"간기능 악화 위험; 간수치·빌리루빈 면밀 확인","extra_tests":[],"drugs":["Doxorubicin","Cisplatin","5-FU","Gemcitabine"]},
+    "췌장암": {"note":"혈구감소/영양 저하 위험; 전신 상태 관찰","extra_tests":[],"drugs":["Gemcitabine","5-FU","Oxaliplatin","Irinotecan","Capecitabine"]},
+    "육종(Sarcoma)": {"note":"안트라사이클린 기반 많이 사용","extra_tests":[],"drugs":["Doxorubicin","Ifosfamide","Cyclophosphamide","Gemcitabine","Docetaxel","Paclitaxel"]},
 }
 
 # -------------- Helpers --------------
@@ -183,7 +126,6 @@ def interpret_labs(l, extras):
         if ratio>20: add(f"BUN/Cr {ratio:.1f}: 탈수 의심")
         elif ratio<10: add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
 
-    # 이뇨제 관련 보강
     if extras.get("diuretic"):
         if entered(l.get("Na")) and l["Na"]<135:
             add("🧂 이뇨제 복용 중 저나트륨 → 어지럼/탈수 주의, 의사와 상의")
@@ -218,25 +160,6 @@ def summarize_meds(meds: dict):
             out.append(line)
     return out
 
-def make_pdf(report_text: str) -> bytes:
-    if not HAS_PDF:
-        return b""
-    buf = bytes()
-    import io
-    bio = io.BytesIO()
-    c = canvas.Canvas(bio, pagesize=A4)
-    width, height = A4
-    x, y = 20*mm, height - 20*mm
-    for line in report_text.split("\n"):
-        if y < 20*mm:
-            c.showPage()
-            y = height - 20*mm
-        c.drawString(x, y, line)
-        y -= 6*mm
-    c.save()
-    bio.seek(0)
-    return bio.read()
-
 # -------------- UI --------------
 st.divider()
 st.header("1️⃣ 환자/암 정보")
@@ -258,14 +181,48 @@ elif group == "고형암":
     catalog = SOLID[cancer]
 else:
     st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
+
+if catalog:
+    st.markdown(f"🧾 **암종류 노트:** {catalog['note']}")
+    if catalog.get("extra_tests"):
+        st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
+
+    # ===== Clickable sections under cancer info =====
+    meds = {}
+    extras = {}
+
+    with st.expander("💊 항암제 선택", expanded=True):
+        st.markdown("암종류에 맞는 항암제를 선택하세요.")
+        med_list = list(catalog.get("drugs", []))
+        if "ARA-C" in med_list:
+            use = st.checkbox("ARA-C 사용")
+            if use:
+                meds["ARA-C"] = {
+                    "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"]),
+                    "dose": st.number_input("ARA-C 용량/일(임의 입력)", min_value=0.0, step=0.1),
+                }
+            med_list = [d for d in med_list if d != "ARA-C"]
+        for key in med_list:
+            if st.checkbox(f"{key} 사용"):
+                meds[key] = {"dose_or_tabs": st.number_input(f"{key} 투여량/알약 개수(소수 허용)", min_value=0.0, step=0.1)}
+        st.markdown("### 🧪 동반 약물")
+        extras["diuretic"] = st.checkbox("이뇨제 복용 중")
+
+    with st.expander("🧫 항생제 선택", expanded=False):
+        st.caption("해당되는 항생제를 선택하세요.")
+        extras.setdefault("abx", [])
+        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
+else:
     meds = {}
     extras = {}
     extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
     with st.expander("🧫 항생제 선택", expanded=False):
         extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
+
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
 
+# Number inputs in fixed order (mobile-safe, single column)
 vals = {}
 for name in ORDER:
     if name == "CRP":
@@ -273,48 +230,10 @@ for name in ORDER:
     elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
         vals[name] = st.number_input(f"{name}", step=1.0)
     else:
-    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
-    meds = {}
-    extras = {}
-    extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
-    with st.expander("🧫 항생제 선택", expanded=False):
-        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
+        vals[name] = st.number_input(f"{name}", step=0.1)
+
 st.divider()
-st.header("3️⃣ 치료/약물 선택")
-
-meds = {}
-extras = {}
-
-if catalog:
-    st.markdown("### 💊 암종류별 항암제")
-    med_list = list(catalog.get("drugs", []))
-    if "ARA-C" in med_list:
-        use = st.checkbox("ARA-C 사용")
-        if use:
-            meds["ARA-C"] = {
-                "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"]),
-                "dose": st.number_input("ARA-C 용량/일(임의 입력)", min_value=0.0, step=0.1),
-            }
-        med_list = [d for d in med_list if d != "ARA-C"]
-    for key in med_list:
-        if st.checkbox(f"{key} 사용"):
-            meds[key] = {"dose_or_tabs": st.number_input(f"{key} 투여량/알약 개수(소수 허용)", min_value=0.0, step=0.1)}
-
-    st.markdown("### 🧪 동반 약물")
-    extras["diuretic"] = st.checkbox("이뇨제 복용 중")
-else:
-    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
-    meds = {}
-    extras = {}
-    extras["diuretic"] = st.checkbox("이뇨제 복용 중 (암 미선택)")
-    with st.expander("🧫 항생제 선택", expanded=False):
-        extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
-st.divider()
-col_run1, col_run2 = st.columns(2)
-with col_run1:
-    run = st.button("🔎 해석하기", use_container_width=True)
-with col_run2:
-    gen_pdf = st.checkbox("보고서 PDF도 만들기", value=False)
+run = st.button("🔎 해석하기", use_container_width=True)
 
 # -------------- RUN --------------
 if run:
@@ -370,17 +289,6 @@ if run:
     st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
-    st.download_button("📥 보고서(.txt) 다운로드", data=report_md.encode("utf-8"),
-                       file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                       mime="text/plain")
-
-    if gen_pdf and HAS_PDF:
-        pdf_bytes = make_pdf(report_md.replace("# ","").replace("## ",""))
-        st.download_button("📥 보고서(.pdf) 다운로드", data=pdf_bytes,
-                           file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                           mime="application/pdf")
-    elif gen_pdf and not HAS_PDF:
-        st.info("PDF 모듈(reportlab)이 없어서 PDF는 생략됩니다. requirements.txt에 reportlab 추가 후 배포하세요.")
 
     # 저장 (별명 있을 때만)
     if nickname.strip():
@@ -408,7 +316,6 @@ else:
         rows = st.session_state.records.get(sel, [])
         if rows:
             data = [{"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC","Hb","PLT","CRP","ANC"]}} for r in rows]
-            import pandas as pd
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
         else:
