@@ -116,7 +116,7 @@ NEUTRO_GUIDE = "🧼 호중구 감소 시: 생채소 금지, 익혀 섭취(전�
 IRON_WARN = "⚠️ 항암/백혈병 환자는 철분제 복용을 피하거나 반드시 주치의와 상담하세요. (비타민C 병용 시 흡수↑)"
 
 CANCERS = [
-    "ALL", "APL", "CML", "AML", "CLL",
+    "ALL", "APL", "CML", "AML", "CLL"
     "고형암(폐/유방/대장 등)", "육종(Soft tissue/Bone)"
 ]
 
