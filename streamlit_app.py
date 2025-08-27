@@ -161,7 +161,6 @@ CANCER_EXTRA_LABS = {
         {"key":"IgA", "label":"IgA (mg/dL)", "type":"num", "step":10.0},
         {"key":"IgM", "label":"IgM (mg/dL)", "type":"num", "step":5.0},
     ],
-    ,
     # ---- SOLID TUMORS ----
     "폐암(NSCLC)": [
         {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
