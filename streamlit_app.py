@@ -238,8 +238,8 @@ extras: Dict = {}
 qna: List[str] = []
 
 if category == "항암치료":
-    st.subheader("혈액암 종류 (선택)")
-    cancer = st.radio("혈액암", ["선택 안 함","AML","APL","ALL","CML","CLL"], horizontal=True)
+    st.subheader("암 종류 (선택)")
+    cancer = st.radio("암 종류", ["선택 안 함","AML","APL","ALL","CML","CLL","고형암"], horizontal=True)
 
     if cancer != "선택 안 함":
         st.info("선택한 암종류에 권장 모니터링 항목과 추가 지표 입력란이 표시됩니다. (입력은 선택)")
@@ -255,6 +255,58 @@ if category == "항암치료":
             extras["BCR-ABL_PCR"] = st.text_input("BCR-ABL PCR 결과 (선택)", placeholder="예: MR3.0, 0.1% 등")
         if cancer == "CLL":
             extras["Immunoglobulin"] = st.text_input("면역글로불린 (선택)", placeholder="예: IgG 600 mg/dL")
+
+
+        if cancer == "고형암":
+            st.markdown("**고형암 공통 모니터링 권장:** CBC(빈혈/혈소판), 간기능(AST/ALT/TB), 신장(Cr/BUN), 전해질(Na/K/Ca), CRP")
+            solid_type = st.selectbox("고형암 세부 선택", ["폐암","유방암","대장암","위암","간암(HCC)","췌장암","난소암","전립선암","기타"])
+            st.markdown("**종양표지자 (선택 입력)**")
+            extras["CEA"] = st.number_input("CEA (ng/mL)", value=None, step=0.1, format="%.2f")
+            extras["CA19-9"] = st.number_input("CA 19-9 (U/mL)", value=None, step=1.0, format="%.1f")
+            extras["CA-125"] = st.number_input("CA-125 (U/mL)", value=None, step=1.0, format="%.1f")
+            extras["AFP"] = st.number_input("AFP (ng/mL)", value=None, step=0.1, format="%.2f")
+            extras["PSA"] = st.number_input("PSA (ng/mL)", value=None, step=0.1, format="%.2f")
+            extras["CA15-3"] = st.number_input("CA 15-3 (U/mL)", value=None, step=0.1, format="%.2f")
+            # 보호자 맞춤 Q&A (간단)
+            qna_map_solid = {
+                "폐암":[
+                    "호흡곤란·지속 기침·혈담 발생 시 즉시 병원.",
+                    "항암 중 발열·흉통·산소포화도 저하는 응급."
+                ],
+                "유방암":[
+                    "림프부종 예방: 팔 채혈/혈압 측정은 반대측 우선.",
+                    "피부변화·상처 감염 징후 관찰."
+                ],
+                "대장암":[
+                    "설사/변비 시 수분·전해질 보충, 심하면 진료.",
+                    "복통·혈변·장폐색 증상 즉시 평가."
+                ],
+                "위암":[
+                    "구토 지속/체중 급감 시 영양평가.",
+                    "출혈 의심(흑변/토혈) 시 응급."
+                ],
+                "간암(HCC)":[
+                    "복수·황달·의식 변화는 즉시 병원.",
+                    "알코올·간독성 약물 회피."
+                ],
+                "췌장암":[
+                    "복통 악화·황달·식욕부진 지속 시 보고.",
+                    "영양 관리(고열량·고단백) 중요."
+                ],
+                "난소암":[
+                    "복부팽만·호흡곤란(복수/흉수) 발생 시 평가.",
+                    "오심·구토 지속 시 탈수 주의."
+                ],
+                "전립선암":[
+                    "뼈통증 악화·신경학적 증상(척수압박) 즉시 평가.",
+                    "야뇨·요폐·혈뇨 변화 모니터."
+                ],
+                "기타":[
+                    "발열·심한 통증·출혈·호흡곤란은 공통 응급 신호.",
+                    "약물 복용 시간·부작용 기록 유지."
+                ]
+            }
+            qna.extend(qna_map_solid.get(solid_type, []))
 
         qna_map = {
             "AML":[
@@ -402,7 +454,7 @@ if run:
         v = labs.get(k)
         if entered(v):
             report_lines.append(f"- {k}: {v}")
-    report_text = "\n".join(report_lines) + "\n\n" + FEVER_GUIDE + "\n\n" + "제작자: Hoya/GPT · 자문: Hoya/GPT\n"
+    report_text = "\n".join(report_lines) + "\n\n" + "**추가 정보**\n" + "\n".join([f"- {k}: {v}" for k,v in extras.items() if v not in (None, "", False)]) + "\n\n" + FEVER_GUIDE + "\n\n" + "제작자: Hoya/GPT · 자문: Hoya/GPT\n"
 
     st.download_button("📥 보고서(.md) 다운로드", data=report_text.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
@@ -455,4 +507,3 @@ else:
 
 st.markdown("---")
 st.caption(f"뷰 카운트(세션): {st.session_state.view_count} · v2.9 (카테고리 상단 이동 적용)")
-
