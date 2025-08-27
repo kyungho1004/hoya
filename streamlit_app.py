@@ -1,4 +1,3 @@
-
 import json
 from datetime import datetime, date
 import streamlit as st
@@ -95,6 +94,7 @@ def entered(v):
     except Exception:
         return False
 
+
 def interpret_labs(l, extras):
     out=[]
     def add(s): out.append("- " + s)
@@ -116,6 +116,7 @@ def interpret_labs(l, extras):
         if entered(l.get("Ca")) and l["Ca"]<8.5: add("🦴 이뇨제 복용 중 저칼슘 → 손저림/경련 주의")
     return out
 
+
 def food_suggestions(l):
     foods=[]
     if entered(l.get("Albumin")) and l["Albumin"]<3.5: foods.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
@@ -126,6 +127,7 @@ def food_suggestions(l):
     if entered(l.get("ANC")) and l["ANC"]<500: foods.append("🧼 호중구 감소: 생채소 금지, 익혀 섭취, 2시간 지난 음식 금지, 껍질 과일은 의사 상의.")
     foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return foods
+
 
 def summarize_meds(meds: dict):
     out=[]
@@ -161,6 +163,7 @@ elif group == "고형암":
 else:
     st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
 
+# PC 표 모드 스위치 (모바일은 세로 쌓임 고정)
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일에선 자동 세로로 쌓여 줄꼬임이 없습니다.")
 
 meds = {}
@@ -171,42 +174,44 @@ if catalog:
     if catalog.get("extra_tests"):
         st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
 
-    with st.expander("💊 항암제 입력 (0=미사용, ATRA는 정수)", expanded=True):
-        # ARA-C: 제형 + 용량(0=미사용)
-        drug_list = list(catalog.get("drugs", []))
-        if "ARA-C" in drug_list:
-            st.markdown("**ARA-C (시타라빈)**")
-            ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
-            ara_dose = st.number_input("용량/일(임의 입력, 0=미사용)", min_value=0.0, step=0.1, key="ara_dose")
-            if ara_dose > 0:
-                meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
-            st.divider()
-            drug_list.remove("ARA-C")
-        # 기타 항암제: 숫자 입력(0=미사용), ATRA는 정수
-        for d in drug_list:
-            alias = ANTICANCER.get(d,{}).get("alias","")
-            if d == "ATRA":
-                amt = st.number_input(f"{d} ({alias}) - 캡슐 개수(정수, 0=미사용)", min_value=0, step=1, key=f"med_{d}")
-            else:
-                amt = st.number_input(f"{d} ({alias}) - 용량/알약 개수(0=미사용)", min_value=0.0, step=0.1, key=f"med_{d}")
-            if (d=="ATRA" and amt>0) or (d!="ATRA" and amt>0.0):
-                meds[d] = {"dose_or_tabs": amt}
+    # 💊 항암제 입력 (항상 펼침)
+    st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
+    drug_list = list(catalog.get("drugs", []))
+    if "ARA-C" in drug_list:
+        st.markdown("**ARA-C (시타라빈)**")
+        ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
+        ara_dose = st.number_input("용량/일(임의 입력, 0=미사용)", min_value=0.0, step=0.1, key="ara_dose")
+        if ara_dose > 0:
+            meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
+        st.divider()
+        drug_list.remove("ARA-C")
+    for d in drug_list:
+        alias = ANTICANCER.get(d,{}).get("alias","")
+        if d == "ATRA":
+            amt = st.number_input(f"{d} ({alias}) - 캡슐 개수(정수, 0=미사용)", min_value=0, step=1, key=f"med_{d}")
+        else:
+            amt = st.number_input(f"{d} ({alias}) - 용량/알약 개수(0=미사용)", min_value=0.0, step=0.1, key=f"med_{d}")
+        if (d=="ATRA" and amt>0) or (d!="ATRA" and amt>0.0):
+            meds[d] = {"dose_or_tabs": amt}
 
-    with st.expander("🧪 항생제 입력 (0=미사용)", expanded=False):
-        extras["abx"] = {}
-        for abx in ABX_GUIDE.keys():
-            extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
+    # 🧪 항생제 입력 (항상 펼침)
+    st.markdown("### 🧪 항생제 입력 (0=미사용)")
+    extras["abx"] = {}
+    for abx in ABX_GUIDE.keys():
+        extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
 
-    with st.expander("💧 동반 약물/상태", expanded=False):
-        extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
+    # 💧 동반 약물/상태 (항상 펼침)
+    st.markdown("### 💧 동반 약물/상태")
+    extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
 
 else:
-    with st.expander("🧪 항생제 입력 (0=미사용)", expanded=False):
-        extras["abx"] = {}
-        for abx in ABX_GUIDE.keys():
-            extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
-    with st.expander("💧 동반 약물/상태", expanded=False):
-        extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
+    # 암 그룹 미선택이어도 항생제/이뇨제는 바로 입력 가능
+    st.markdown("### 🧪 항생제 입력 (0=미사용)")
+    extras["abx"] = {}
+    for abx in ABX_GUIDE.keys():
+        extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
+    st.markdown("### 💧 동반 약물/상태")
+    extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
 
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
