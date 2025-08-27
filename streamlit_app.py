@@ -9,18 +9,18 @@ try:
 except Exception:
     HAS_PD = False
 
-# ---------- 기본 설정 (모바일 줄꼬임 방지: 기본 세로형, PC에서만 표 모드 선택) ----------
+# ===== 기본 설정 =====
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (통합본 v2.9+ / Unified Numeric)")
+st.title("🩸 피수치 자동 해석기 (통합본 v2.9++ / Direct Input)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
-st.caption("✅ 모든 약물(항암제/항생제/이뇨제)을 **숫자 입력(0=미사용)**으로 통일했습니다. ATRA는 정수 입력. ARA-C는 제형+용량(0=미사용). 모바일 기본 세로, PC 표 모드 선택 가능.")
+st.caption("✅ **+ 버튼 없이 직접 타이핑 입력 모드**로 전면 전환했습니다. (모바일 줄꼬임 방지: 기본 세로 / PC 표 모드 선택) · ATRA는 정수, ARA-C는 제형+용량.")
 
 if "records" not in st.session_state:
     st.session_state.records = {}
 
 ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"]
 
-# ---------- 약물/가이드 데이터 ----------
+# ===== 데이터 사전 =====
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
@@ -87,10 +87,31 @@ FOODS = {
     "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
     "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
 }
-
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
-# ---------- 유틸 ----------
+# ===== 유틸: 숫자 직접 입력 파서 =====
+def _parse_numeric(text, default=0.0, as_int=False, decimals=None):
+    if text is None:
+        return default
+    s = str(text).strip()
+    if s == "":
+        return default
+    s = s.replace(",", "")  # 1,234.5 → 1234.5
+    try:
+        v = float(s)
+        if as_int:
+            return int(v)
+        if decimals is not None:
+            return float(f"{v:.{decimals}f}")
+        return v
+    except Exception:
+        return default
+
+def num_input(label, key, placeholder="", as_int=False, decimals=None):
+    # Streamlit의 number_input 대신 text_input으로 항상 직접 타이핑
+    raw = st.text_input(label, key=key, placeholder=placeholder, label_visibility="visible")
+    return _parse_numeric(raw, as_int=as_int, decimals=decimals)
+
 def entered(v):
     try:
         return v is not None and float(v) != 0
@@ -108,6 +129,7 @@ def _fmt(name, val):
         return f"{int(v)}" if v.is_integer() else f"{v:.1f}"
     return f"{v:.1f}"
 
+# ===== 해석 =====
 def interpret_labs(l, extras):
     out=[]
     def add(s): out.append("- " + s)
@@ -136,7 +158,6 @@ def interpret_labs(l, extras):
         ratio=l["BUN"]/l["Cr"]
         if ratio>20: add(f"BUN/Cr {ratio:.1f}: 탈수 의심")
         elif ratio<10: add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
-    # 이뇨제 수치 기반 경고
     if extras.get("diuretic_amt", 0) and extras["diuretic_amt"]>0:
         if entered(l.get("Na")) and l["Na"]<135: add("🧂 이뇨제 복용 중 저나트륨 → 어지럼/탈수 주의, 의사와 상의")
         if entered(l.get("K")) and l["K"]<3.5: add("🥔 이뇨제 복용 중 저칼륨 → 심부정맥/근력저하 주의, 칼륨 보충 식이 고려")
@@ -179,7 +200,7 @@ def abx_summary(abx_dict):
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
     return lines
 
-# ---------- UI: 1) 환자/암 정보 ----------
+# ===== UI 1) 환자/암 정보 =====
 st.divider()
 st.header("1️⃣ 환자/암 정보")
 
@@ -201,8 +222,8 @@ elif group == "고형암":
 else:
     st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
 
-# PC 표 모드 스위치 (모바일은 세로 쌓임 고정)
-table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일에선 자동 세로로 쌓여 줄꼬임이 없습니다.")
+# PC 표 모드 스위치 (모바일 기본 세로)
+table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
 meds = {}
 extras = {}
@@ -212,13 +233,13 @@ if catalog:
     if catalog.get("extra_tests"):
         st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
 
-    # 💊 항암제 입력 (항상 펼침)
+    # 💊 항암제 입력 (항상 펼침 / 직접 타이핑)
     st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
     drug_list = list(catalog.get("drugs", []))
     if "ARA-C" in drug_list:
         st.markdown("**ARA-C (시타라빈)**")
         ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
-        ara_dose = st.number_input("용량/일(임의 입력, 0=미사용)", min_value=0.0, step=0.1, key="ara_dose")
+        ara_dose = num_input("용량/일(임의 입력, 0=미사용)", key="ara_dose", decimals=1, placeholder="예: 100")
         if ara_dose > 0:
             meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
         st.divider()
@@ -226,32 +247,32 @@ if catalog:
     for d in drug_list:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
-            amt = st.number_input(f"{d} ({alias}) - 캡슐 개수(정수, 0=미사용)", min_value=0, step=1, key=f"med_{d}")
+            amt = num_input(f"{d} ({alias}) - 캡슐 개수(정수, 0=미사용)", key=f"med_{d}", as_int=True, placeholder="예: 2")
         else:
-            amt = st.number_input(f"{d} ({alias}) - 용량/알약 개수(0=미사용)", min_value=0.0, step=0.1, key=f"med_{d}")
-        if (d=="ATRA" and amt>0) or (d!="ATRA" and amt>0.0):
+            amt = num_input(f"{d} ({alias}) - 용량/알약 개수(0=미사용)", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
+        if amt and float(amt)>0:
             meds[d] = {"dose_or_tabs": amt}
 
-    # 🧪 항생제 입력 (항상 펼침)
+    # 🧪 항생제 입력 (직접 타이핑)
     st.markdown("### 🧪 항생제 입력 (0=미사용)")
     extras["abx"] = {}
     for abx in ABX_GUIDE.keys():
-        extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
+        extras["abx"][abx] = num_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
 
-    # 💧 동반 약물/상태 (항상 펼침)
+    # 💧 동반 약물/상태
     st.markdown("### 💧 동반 약물/상태")
-    extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
+    extras["diuretic_amt"] = num_input("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
 else:
     # 암 그룹 미선택이어도 항생제/이뇨제는 바로 입력 가능
     st.markdown("### 🧪 항생제 입력 (0=미사용)")
     extras["abx"] = {}
     for abx in ABX_GUIDE.keys():
-        extras["abx"][abx] = st.number_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", min_value=0.0, step=0.1, key=f"abx_{abx}")
+        extras["abx"][abx] = num_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
     st.markdown("### 💧 동반 약물/상태")
-    extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
+    extras["diuretic_amt"] = num_input("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
-# ---------- UI: 2) 혈액 수치 입력 ----------
+# ===== UI 2) 혈액 수치 입력 (직접 타이핑) =====
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
 
@@ -261,11 +282,11 @@ def render_inputs_vertical():
     st.markdown("**기본 패널**")
     for name in ORDER:
         if name == "CRP":
-            vals[name] = st.number_input(f"{name}", step=0.01, format="%.2f")
+            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
         elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-            vals[name] = st.number_input(f"{name}", step=1.0)
+            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
         else:
-            vals[name] = st.number_input(f"{name}", step=0.1)
+            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
 
 def render_inputs_table():
     st.markdown("**기본 패널 (표 모드)**")
@@ -274,26 +295,26 @@ def render_inputs_table():
     with left:
         for name in ORDER[:half]:
             if name == "CRP":
-                vals[name] = st.number_input(f"{name}", step=0.01, format="%.2f", key=f"l_{name}")
+                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = st.number_input(f"{name}", step=1.0, key=f"l_{name}")
+                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = st.number_input(f"{name}", step=0.1, key=f"l_{name}")
+                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
     with right:
         for name in ORDER[half:]:
             if name == "CRP":
-                vals[name] = st.number_input(f"{name}", step=0.01, format="%.2f", key=f"r_{name}")
+                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = st.number_input(f"{name}", step=1.0, key=f"r_{name}")
+                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = st.number_input(f"{name}", step=0.1, key=f"r_{name}")
+                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
 
-if table_mode:
+if st.checkbox("⚙️ PC용 표 모드(가로형) 사용", value=False, key="table_mode_help", help="PC에서만 권장. 모바일은 세로형이 가장 안정적입니다."):
     render_inputs_table()
 else:
     render_inputs_vertical()
 
-# ---------- 해석 실행 ----------
+# ===== 해석 실행 =====
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
 
@@ -364,7 +385,7 @@ if run:
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
 
-# ---------- 그래프 ----------
+# ===== 그래프 =====
 st.markdown("---")
 st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
 if not HAS_PD:
@@ -382,4 +403,5 @@ else:
     else:
         st.info("아직 저장된 기록이 없습니다.")
 
-st.caption("📱 줄꼬임 방지: 모바일 세로 고정, PC 표 모드 제공. 모든 약물은 숫자 입력(0=미사용)으로 통일되었습니다. CRP는 0.01 단위 입력.")
+st.caption("📱 **직접 타이핑 입력 모드**(텍스트 입력) 채택으로 +버튼 없이 입력 가능합니다. 모바일 세로 고정으로 줄꼬임 방지, CRP는 0.01 단위 표기.")
+
