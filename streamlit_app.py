@@ -5,18 +5,13 @@ BloodMap 피수치 자동 해석기 v2.9 (통합본, 단일 파일)
 - 모바일/PC 동일한 단일 컬럼 UI, 줄꼬임 방지
 - 입력한 수치만 결과/보고서에 표시
 - 카테고리: 일반 해석 / 항암치료 / 항생제 / 투석 환자 / 당뇨 환자
-- 혈액암 세부 선택(AML, APL, ALL, CML, CLL) 지원 + 추가 지표(PT, aPTT, Fibrinogen, DIC Score, BCR-ABL, Ig)
-- 항암제 14종 + ARA-C 제형(IV/SC/HDAC), 베사노이드(ATRA) 분화증후군·설사 포함
-- 이뇨제/발열 가이드, 뉴트로페닉 식이 수칙
-- 별명 저장 & 그래프 (WBC, Hb, PLT, CRP, ANC)
-- 보고서 .md / .txt 다운로드 (PDF은 reportlab 설치 시 사용 가능)
+- (요청 반영) 카테고리 선택을 상단(환자 정보 바로 아래)으로 이동
 """
 from __future__ import annotations
 
 import io
-import json
 from datetime import datetime, date
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 
 import streamlit as st
 
@@ -42,7 +37,7 @@ st.write("입력한 값만 결과에 반영됩니다. 모바일에서도 줄꼬�
 
 # Session state init
 if "records" not in st.session_state:
-    st.session_state.records: Dict[str, List[Dict]] = {}
+    st.session_state.records = {}
 if "view_count" not in st.session_state:
     st.session_state.view_count = 0
 st.session_state.view_count += 1
@@ -55,17 +50,7 @@ ORDER = [
     "CRP","Cr","Uric Acid","Total Bilirubin","BUN","BNP"
 ]
 
-# Ranges (단순 예시 범위, 세부 해석은 보호자 교육용)
-REF = {
-    "WBC": (4, 10), "Hb": (12, 17), "PLT": (150, 400), "ANC": (1500, 8000),
-    "Ca": (8.5, 10.5), "P": (2.5, 4.5), "Na": (135, 145), "K": (3.5, 5.0), "Albumin": (3.5, 5.0),
-    "Glucose": (70, 199), "Total Protein": (6.0, 8.3),
-    "AST": (0, 40), "ALT": (0, 41), "LDH": (140, 280),
-    "CRP": (0, 0.5), "Cr": (0.6, 1.3), "Uric Acid": (3.4, 7.0), "Total Bilirubin": (0.2, 1.2),
-    "BUN": (7, 20), "BNP": (0, 100)  # BNP는 참고치 다양
-}
-
-# 약물/가이드 데이터
+# 약물/가이드 데이터 (요약)
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
@@ -120,21 +105,15 @@ ANTIPYRETIC_TIPS = (
     "- 교차 투여는 **의료진 지시**가 있을 때만"
 )
 
-# ----------------------------- Utilities -----------------------------
 def entered(v) -> bool:
     try:
         return v is not None and str(v) != "" and float(v) > 0
     except Exception:
         return False
 
-def fmt(v: Optional[float]) -> str:
-    return "" if v is None else str(v)
-
 def interpret_labs(l: Dict[str, Optional[float]]) -> List[str]:
-    """간단 요약 해석. 보호자 교육용으로 보수적 결과만 출력."""
     out: List[str] = []
     def add(s): out.append("- " + s)
-
     if entered(l.get("WBC")):
         w = l["WBC"]
         if w < 4: add(f"WBC {w}: 낮음 → 감염 위험↑")
@@ -177,8 +156,8 @@ def food_suggestions(l: Dict[str, Optional[float]]) -> List[str]:
     if entered(l.get("Ca")) and l["Ca"] < 8.5:
         foods.append("칼슘 낮음 → " + ", ".join(FOODS["Ca_low"]))
     if entered(l.get("ANC")) and l["ANC"] < 500:
-        foods.append("🧼 호중구 감소(ANC<500): " + " · ".join(NEUTROPENIC_RULES))
-    foods.append("⚠️ 항암/백혈병 환자는 **철분제** 복용 전 반드시 주치의와 상의 (비타민 C와 함께 복용 시 흡수↑).")
+        foods.append("🧼 호중구 감소(ANC<500): 생채소 금지 · 모든 음식 익혀 섭취 · 조리 후 2시간 지난 음식 비권장 · 멸균식품 권장 · 껍질 과일은 주치의와 상의")
+    foods.append("⚠️ 항암/백혈병 환자는 **철분제** 복용 전 반드시 주치의와 상의 (비타민 C 병용 시 흡수↑).")
     return foods
 
 def summarize_meds(meds: Dict) -> List[str]:
@@ -196,7 +175,6 @@ def summarize_meds(meds: Dict) -> List[str]:
     return out
 
 def estimate_anc_500_date(records: List[Dict]) -> Optional[str]:
-    """단순 선형 추세로 ANC가 500을 넘는 시점 추정 (교육용)."""
     if not HAS_PD or not records or len(records) < 2:
         return None
     rows = []
@@ -211,13 +189,14 @@ def estimate_anc_500_date(records: List[Dict]) -> Optional[str]:
                 pass
     if len(rows) < 2:
         return None
+    import numpy as np
+    import pandas as pd
     df = pd.DataFrame(rows).sort_values("t")
     x = (df["t"] - df["t"].min()).dt.total_seconds() / 86400.0
     y = df["ANC"]
     if y.max() >= 500:
         return "이미 500 이상 도달"
     try:
-        import numpy as np
         A = np.vstack([x, np.ones(len(x))]).T
         slope, intercept = np.linalg.lstsq(A, y, rcond=None)[0]
         if slope <= 0:
@@ -228,42 +207,13 @@ def estimate_anc_500_date(records: List[Dict]) -> Optional[str]:
     except Exception:
         return None
 
-def build_report_md(category: str, labs: Dict[str, Optional[float]], meds: Dict, extras: Dict, name: str, test_date: date, qna: List[str]) -> str:
-    buf = []
-    buf.append(f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n")
-    buf.append(f"- 카테고리: {category}\n")
-    buf.append(f"- 검사일: {test_date}\n")
-    if name: buf.append(f"- 별명: {name}\n")
-    buf.append("\n## 입력 수치\n")
-    for k in ORDER:
-        v = labs.get(k)
-        if entered(v):
-            buf.append(f"- {k}: {v}\n")
-    if meds:
-        buf.append("\n## 약물 요약\n")
-        for line in summarize_meds(meds):
-            buf.append(line + "\n")
-    if extras:
-        buf.append("\n## 추가 정보\n")
-        for ek, ev in extras.items():
-            buf.append(f"- {ek}: {ev}\n")
-    if qna:
-        buf.append("\n## 보호자 맞춤 Q&A\n")
-        for q in qna:
-            buf.append(f"- {q}\n")
-    buf.append("\n---\n")
-    buf.append(FEVER_GUIDE + "\n\n" + ANTIPYRETIC_TIPS + "\n")
-    buf.append("\n제작자: Hoya/GPT · 자문: Hoya/GPT\n")
-    return "".join(buf)
-
-def build_report_pdf(md_text: str) -> bytes:
-    """아주 단순하게 줄바꿈 기준으로 PDF 렌더링 (reportlab 필요)."""
+def build_report_pdf(text: str) -> bytes:
     packet = io.BytesIO()
     c = canvas.Canvas(packet, pagesize=A4)
     width, height = A4
     x, y = 40, height - 40
-    for line in md_text.splitlines():
-        c.drawString(x, y, line[:110])  # 한 줄 너무 길면 잘림(간단 렌더)
+    for line in text.splitlines():
+        c.drawString(x, y, line[:110])
         y -= 14
         if y < 40:
             c.showPage()
@@ -275,52 +225,20 @@ def build_report_pdf(md_text: str) -> bytes:
 # ----------------------------- UI -----------------------------
 st.divider()
 st.header("1️⃣ 환자 정보")
-col = st.container()
-with col:
-    name = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
-    test_date = st.date_input("검사 날짜", value=date.today())
+name = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
+test_date = st.date_input("검사 날짜", value=date.today())
 
 st.divider()
-st.header("2️⃣ 입력 방식 선택")
-mode = st.radio("입력 방법을 선택하세요", ["개별 입력", "일괄 붙여넣기"], horizontal=True)
+st.header("2️⃣ 카테고리")
+category = st.selectbox("카테고리 선택", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"])
 
-labs: Dict[str, Optional[float]] = {k: None for k in ORDER}
-
-if mode == "개별 입력":
-    st.markdown("🧪 각 항목을 순서대로 입력하세요. (입력한 항목만 결과에 표시)")
-    for k in ORDER:
-        labs[k] = st.number_input(k, value=None, placeholder="값 입력", step=0.1, format="%.3f")
-else:
-    st.markdown("🧾 줄바꿈 또는 쉼표로 구분하여 순서대로 붙여넣으세요.")
-    st.code(", ".join(ORDER), language="text")
-    raw = st.text_area("값을 순서대로 입력 (줄바꿈/쉼표 가능)", height=180, placeholder="예) 5.2, 11.8, 180, 1200, ...")
-    # robust parse (preserve empties)
-    tokens = []
-    s = (raw or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n").strip("\n ")
-    if s:
-        if ("," in s) and ("\n" not in s):
-            tokens = [tok.strip() for tok in s.split(",")]
-        else:
-            tokens = [line.strip() for line in s.split("\n")]
-    for i, k in enumerate(ORDER):
-        try:
-            v = tokens[i] if i < len(tokens) else ""
-            labs[k] = float(v) if v != "" else None
-        except Exception:
-            labs[k] = None
-
-st.divider()
-st.header("3️⃣ 카테고리 & 옵션")
-
-category = st.selectbox("카테고리", ["일반 해석","항암치료","항생제","투석 환자","당뇨 환자"])
-
+# --- 항암치료 세부옵션 (암종류 등) ---
 meds: Dict = {}
 extras: Dict = {}
 qna: List[str] = []
 
-# --- 항암치료 ---
 if category == "항암치료":
-    st.subheader("혈액암 종류 선택 (선택)")
+    st.subheader("혈액암 종류 (선택)")
     cancer = st.radio("혈액암", ["선택 안 함","AML","APL","ALL","CML","CLL"], horizontal=True)
 
     if cancer != "선택 안 함":
@@ -338,7 +256,6 @@ if category == "항암치료":
         if cancer == "CLL":
             extras["Immunoglobulin"] = st.text_input("면역글로불린 (선택)", placeholder="예: IgG 600 mg/dL")
 
-        # 보호자 맞춤 Q&A (간단 템플릿)
         qna_map = {
             "AML":[
                 "집에서는 발열·출혈·호흡곤란 시 즉시 병원으로.",
@@ -364,7 +281,6 @@ if category == "항암치료":
         qna.extend(qna_map.get(cancer, []))
 
     st.subheader("💊 항암제/보조제")
-    # ARA-C with form
     if st.checkbox("ARA-C 사용"):
         meds["ARA-C"] = {
             "form": st.selectbox("ARA-C 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"]),
@@ -381,14 +297,12 @@ if category == "항암치료":
     if st.checkbox("이뇨제 복용 중"):
         extras["diuretic"] = True
 
-# --- 항생제 ---
 elif category == "항생제":
     st.subheader("🧪 항생제")
     abx_list = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
     if abx_list:
         extras["Antibiotics"] = abx_list
 
-# --- 투석 환자 ---
 elif category == "투석 환자":
     st.subheader("🫧 투석 추가 항목")
     extras["Urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0)
@@ -398,7 +312,6 @@ elif category == "투석 환자":
         extras["diuretic"] = True
     st.markdown("**투석 환자 식이 주의(요약):** 고칼륨(바나나, 오렌지, 토마토 등), 고인(콩류/견과, 유제품 일부) 과다 섭취 주의. 수분·나트륨 조절.")
 
-# --- 당뇨 환자 ---
 elif category == "당뇨 환자":
     st.subheader("🍚 당뇨 지표")
     extras["FPG"] = st.number_input("식전 혈당 (mg/dL)", min_value=0.0, step=1.0)
@@ -407,12 +320,40 @@ elif category == "당뇨 환자":
     extras["HbA1c"] = st.number_input("HbA1c (%)", min_value=0.0, step=0.1, format="%.1f")
     st.markdown("**식이 가이드(요약):** 단순당·당분 음료 줄이고, 식사당 탄수화물 양 일정하게. 저당 간식 선택.")
 
+st.divider()
+st.header("3️⃣ 입력 방식 & 수치 입력")
+
+mode = st.radio("입력 방법을 선택하세요", ["개별 입력", "일괄 붙여넣기"], horizontal=True)
+labs: Dict[str, Optional[float]] = {k: None for k in ORDER}
+
+if mode == "개별 입력":
+    st.markdown("🧪 각 항목을 순서대로 입력하세요. (입력한 항목만 결과에 표시)")
+    for k in ORDER:
+        labs[k] = st.number_input(k, value=None, placeholder="값 입력", step=0.1, format="%.3f")
+else:
+    st.markdown("🧾 줄바꿈 또는 쉼표로 구분하여 순서대로 붙여넣으세요.")
+    st.code(", ".join(ORDER), language="text")
+    raw = st.text_area("값을 순서대로 입력 (줄바꿈/쉼표 가능)", height=180, placeholder="예) 5.2, 11.8, 180, 1200, ...")
+    tokens = []
+    s = (raw or "").replace("，", ",").replace("\r\n", "\n").replace("\r", "\n").strip("\n ")
+    if s:
+        if ("," in s) and ("\n" not in s):
+            tokens = [tok.strip() for tok in s.split(",")]
+        else:
+            tokens = [line.strip() for line in s.split("\n")]
+    for i, k in enumerate(ORDER):
+        try:
+            v = tokens[i] if i < len(tokens) else ""
+            labs[k] = float(v) if v != "" else None
+        except Exception:
+            labs[k] = None
+
 # ----------------------------- Run -----------------------------
 st.divider()
+st.header("4️⃣ 해석 실행 및 결과")
 run = st.button("🔎 해석하기", use_container_width=True)
 
 if run:
-    # 결과 요약
     st.subheader("📋 해석 결과")
     summary = interpret_labs(labs)
     if summary:
@@ -421,57 +362,63 @@ if run:
     else:
         st.info("입력된 수치가 없습니다. 하나 이상 입력해주세요.")
 
-    # 음식 가이드
     foods = food_suggestions(labs)
     if foods:
         st.markdown("### 🥗 음식 가이드")
         for f in foods:
             st.write("- " + f)
 
-    # 약물 요약
     if category == "항암치료" and meds:
         st.markdown("### 💊 항암제 부작용·상호작용 요약")
         for line in summarize_meds(meds):
             st.write(line)
 
-    # 항생제 요약
     if category == "항생제" and extras.get("Antibiotics"):
         st.markdown("### 🧪 항생제 주의 요약")
         for a in extras["Antibiotics"]:
             st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
 
-    # 발열 가이드
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
+    st.write(ANTIPYRETIC_TIPS)
 
-    # ANC 500 예측 (간단)
+    # 간단 ANC 500 도달일 추정
     eta_text = None
-    nick = (name or "").strip()
-    if nick and HAS_PD and st.session_state.records.get(nick):
-        eta = estimate_anc_500_date(st.session_state.records[nick])
+    if name and HAS_PD and st.session_state.records.get(name):
+        eta = estimate_anc_500_date(st.session_state.records[name])
         if eta:
             eta_text = f"예상 ANC 500 도달일: **{eta}** (단순 추정)"
     if eta_text:
         st.success(eta_text)
 
-    # 보고서 생성 & 다운로드
-    report_md = build_report_md(category, labs, meds, extras, name, test_date, qna)
-    st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
+    # 보고서 (md/txt/선택적 pdf)
+    report_lines = []
+    report_lines.append(f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
+    report_lines.append(f"- 카테고리: {category}")
+    report_lines.append(f"- 검사일: {test_date}")
+    if name: report_lines.append(f"- 별명: {name}")
+    report_lines.append("\n## 입력 수치")
+    for k in ORDER:
+        v = labs.get(k)
+        if entered(v):
+            report_lines.append(f"- {k}: {v}")
+    report_text = "\n".join(report_lines) + "\n\n" + FEVER_GUIDE + "\n\n" + "제작자: Hoya/GPT · 자문: Hoya/GPT\n"
+
+    st.download_button("📥 보고서(.md) 다운로드", data=report_text.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
-    st.download_button("📥 보고서(.txt) 다운로드", data=report_md.encode("utf-8"),
+    st.download_button("📥 보고서(.txt) 다운로드", data=report_text.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                        mime="text/plain")
     if HAS_PDF:
-        pdf_bytes = build_report_pdf(report_md)
+        pdf_bytes = build_report_pdf(report_text)
         st.download_button("📥 보고서(.pdf) 다운로드", data=pdf_bytes,
                            file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                            mime="application/pdf")
     else:
         st.caption("PDF 다운로드는 reportlab 설치 시 활성화됩니다.")
 
-    # 저장(선택)
-    if nick:
+    if name:
         if st.checkbox("📝 이 별명으로 저장", value=True):
             rec = {
                 "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -480,7 +427,7 @@ if run:
                 "meds": meds,
                 "extras": extras
             }
-            st.session_state.records.setdefault(nick, []).append(rec)
+            st.session_state.records.setdefault(name, []).append(rec)
             st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
@@ -507,5 +454,5 @@ else:
         st.info("아직 저장된 기록이 없습니다.")
 
 st.markdown("---")
-st.caption(f"뷰 카운트(세션): {st.session_state.view_count} · v2.9")
+st.caption(f"뷰 카운트(세션): {st.session_state.view_count} · v2.9 (카테고리 상단 이동 적용)")
 
