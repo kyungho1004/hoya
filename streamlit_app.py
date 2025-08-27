@@ -94,7 +94,6 @@ def entered(v):
     except Exception:
         return False
 
-
 def interpret_labs(l, extras):
     out=[]
     def add(s): out.append("- " + s)
@@ -116,7 +115,6 @@ def interpret_labs(l, extras):
         if entered(l.get("Ca")) and l["Ca"]<8.5: add("🦴 이뇨제 복용 중 저칼슘 → 손저림/경련 주의")
     return out
 
-
 def food_suggestions(l):
     foods=[]
     if entered(l.get("Albumin")) and l["Albumin"]<3.5: foods.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
@@ -127,7 +125,6 @@ def food_suggestions(l):
     if entered(l.get("ANC")) and l["ANC"]<500: foods.append("🧼 호중구 감소: 생채소 금지, 익혀 섭취, 2시간 지난 음식 금지, 껍질 과일은 의사 상의.")
     foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return foods
-
 
 def summarize_meds(meds: dict):
     out=[]
@@ -348,4 +345,3 @@ else:
         st.info("아직 저장된 기록이 없습니다.")
 
 st.caption("📱 줄꼬임 방지: 모바일 세로 고정, PC 표 모드 제공. 모든 약물은 숫자 입력(0=미사용)으로 통일되었습니다. CRP는 0.01 단위 입력.")
-
