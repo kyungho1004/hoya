@@ -96,6 +96,248 @@ SOLID = {
     "육종(Sarcoma)": {"note":"안트라사이클린 기반 많이 사용","extra_tests":[],"drugs":["Doxorubicin","Ifosfamide","Cyclophosphamide","Gemcitabine","Docetaxel","Paclitaxel"]},
 }
 
+
+# -------------- Cancer-specific Lab Panels --------------
+# Solid tumor extra panels
+SOLID_EXTRA_LABS = {
+    "폐암(NSCLC)": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"CYFRA21-1", "label":"CYFRA21-1 (ng/mL)", "type":"num", "step":0.1},
+    ],
+    "유방암": [
+        {"key":"ER", "label":"ER (%)", "type":"num", "step":1.0},
+        {"key":"PR", "label":"PR (%)", "type":"num", "step":1.0},
+        {"key":"HER2", "label":"HER2 (IHC 0-3+)", "type":"num", "step":1.0},
+        {"key":"EF", "label":"좌심실 박출률 EF (%)", "type":"num", "step":1.0},
+    ],
+    "대장암": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"ALP", "label":"ALP (U/L)", "type":"num", "step":1.0},
+    ],
+    "위암": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"CA19-9", "label":"CA19-9 (U/mL)", "type":"num", "step":1.0},
+    ],
+    "간암(HCC)": [
+        {"key":"AFP", "label":"AFP (ng/mL)", "type":"num", "step":1.0},
+        {"key":"PIVKA-II", "label":"PIVKA-II (mAU/mL)", "type":"num", "step":1.0},
+        {"key":"Total Bilirubin", "label":"Total Bilirubin (mg/dL)", "type":"num", "step":0.1},
+    ],
+    "췌장암": [
+        {"key":"CA19-9", "label":"CA19-9 (U/mL)", "type":"num", "step":1.0},
+        {"key":"Amylase", "label":"Amylase (U/L)", "type":"num", "step":1.0},
+        {"key":"Lipase", "label":"Lipase (U/L)", "type":"num", "step":1.0},
+    ],
+    "육종(Sarcoma)": [
+        {"key":"LDH_extra", "label":"LDH (U/L)", "type":"num", "step":1.0},
+        {"key":"ALP", "label":"ALP (U/L)", "type":"num", "step":1.0},
+    ],
+}
+
+# Define extra labs per hematologic cancer and simple thresholds for interpretation
+CANCER_EXTRA_LABS = {
+    "AML": [
+        {"key":"PT", "label":"PT (sec)", "type":"num", "step":0.1},
+        {"key":"aPTT", "label":"aPTT (sec)", "type":"num", "step":0.1},
+        {"key":"Fibrinogen", "label":"Fibrinogen (mg/dL)", "type":"num", "step":1.0},
+    ],
+    "APL": [
+        {"key":"PT", "label":"PT (sec)", "type":"num", "step":0.1},
+        {"key":"aPTT", "label":"aPTT (sec)", "type":"num", "step":0.1},
+        {"key":"Fibrinogen", "label":"Fibrinogen (mg/dL)", "type":"num", "step":1.0},
+        {"key":"D-dimer", "label":"D-dimer (µg/mL FEU)", "type":"num", "step":0.1},
+        {"key":"DIC Score", "label":"DIC Score (점수)", "type":"num", "step":1.0},
+    ],
+    "ALL": [
+        {"key":"PT", "label":"PT (sec)", "type":"num", "step":0.1},
+        {"key":"aPTT", "label":"aPTT (sec)", "type":"num", "step":0.1},
+    ],
+    "CML": [
+        {"key":"BCR-ABL PCR", "label":"BCR-ABL PCR (%IS)", "type":"num", "step":0.01},
+        {"key":"LDH", "label":"LDH", "type":"alias"},  # already in base ORDER, alias to emphasize
+    ],
+    "CLL": [
+        {"key":"IgG", "label":"IgG (mg/dL)", "type":"num", "step":10.0},
+        {"key":"IgA", "label":"IgA (mg/dL)", "type":"num", "step":10.0},
+        {"key":"IgM", "label":"IgM (mg/dL)", "type":"num", "step":5.0},
+    ],
+    ,
+    # ---- SOLID TUMORS ----
+    "폐암(NSCLC)": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"CYFRA21-1", "label":"CYFRA 21-1 (ng/mL)", "type":"num", "step":0.1},
+    ],
+    "유방암": [
+        {"key":"ER", "label":"ER 상태", "type":"select", "options":["Unknown","Negative","Positive"]},
+        {"key":"PR", "label":"PR 상태", "type":"select", "options":["Unknown","Negative","Positive"]},
+        {"key":"HER2", "label":"HER2 상태", "type":"select", "options":["Unknown","0/1- (음성)","2+ (경계)","3+ (양성)"]},
+        {"key":"LVEF", "label":"좌심실 구혈률 LVEF (%)", "type":"num", "step":1.0},
+    ],
+    "대장암": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"ALP", "label":"ALP (U/L)", "type":"num", "step":1.0},
+    ],
+    "위암": [
+        {"key":"CEA", "label":"CEA (ng/mL)", "type":"num", "step":0.1},
+        {"key":"CA19-9", "label":"CA 19-9 (U/mL)", "type":"num", "step":1.0},
+    ],
+    "간암(HCC)": [
+        {"key":"AFP", "label":"AFP (ng/mL)", "type":"num", "step":1.0},
+        {"key":"PIVKA-II", "label":"PIVKA-II (mAU/mL)", "type":"num", "step":1.0},
+        {"key":"TB_alias", "label":"(참고) 총빌리루빈 TB는 기본 패널에 있음", "type":"alias"},
+    ],
+    "췌장암": [
+        {"key":"CA19-9", "label":"CA 19-9 (U/mL)", "type":"num", "step":1.0},
+        {"key":"Amylase", "label":"Amylase (U/L)", "type":"num", "step":1.0},
+        {"key":"Lipase", "label":"Lipase (U/L)", "type":"num", "step":1.0},
+    ],
+    "육종(Sarcoma)": [
+        {"key":"LDH_alias", "label":"(참고) LDH는 기본 패널에 있음", "type":"alias"},
+        {"key":"ALP", "label":"ALP (U/L)", "type":"num", "step":1.0},
+    ]
+}
+
+def get_extra_panel(group, cancer):
+    if group == "고형암":
+        return SOLID_EXTRA_LABS.get(cancer, [])
+
+    if group != "혈액암": 
+        return []
+    return CANCER_EXTRA_LABS.get(cancer, [])
+
+def interpret_cancer_specific(cancer, vals, group):
+    notes = []
+    def add(s): notes.append("- " + s)
+    v = vals.get
+    # Common coag thresholds
+    if cancer in ("AML","APL","ALL"):
+        if v("PT") is not None and v("PT") != "":
+            try:
+                if float(v("PT")) > 15: add(f"PT {v('PT')}: 연장 → 응고장애/DIC 고려")
+            except: pass
+        if v("aPTT") is not None and v("aPTT") != "":
+            try:
+                if float(v("aPTT")) > 40: add(f"aPTT {v('aPTT')}: 연장")
+            except: pass
+    if cancer in ("AML","APL"):
+        try:
+            if vals.get("Fibrinogen") is not None and float(vals["Fibrinogen"]) < 150:
+                add(f"Fibrinogen {vals['Fibrinogen']}: 감소 → DIC 위험")
+        except: pass
+    if cancer == "APL":
+        try:
+            if vals.get("D-dimer") is not None and float(vals["D-dimer"]) > 0.5:
+                add(f"D-dimer {vals['D-dimer']}: 상승 → DIC 의심")
+        except: pass
+        try:
+            if vals.get("DIC Score") is not None and float(vals["DIC Score"]) >= 5:
+                add(f"DIC Score {vals['DIC Score']}: DIC 가능성↑ (즉시 보고)")
+        except: pass
+    if cancer == "CML":
+        try:
+            if vals.get("BCR-ABL PCR") is not None:
+                add(f"BCR-ABL PCR: {vals['BCR-ABL PCR']} %IS (치료반응 추적 지표)")
+        except: pass
+    if cancer == "CLL":
+        # Simple lower bounds for hypogammaglobulinemia
+        try:
+            for k, th in [("IgG",700),("IgA",70),("IgM",40)]:
+                if vals.get(k) is not None and float(vals[k]) < th:
+                    add(f"{k} {vals[k]}: 낮음 → 감염 위험↑ (IVIG 고려 상황 상담)")
+        except: pass
+    
+    if group == "고형암":
+        if cancer == "폐암(NSCLC)":
+            try:
+                if vals.get("CEA") and float(vals["CEA"]) > 5:
+                    add(f"CEA {vals['CEA']}: 상승 → 재발/전이 가능성")
+            except: pass
+        if cancer == "유방암":
+            try:
+                if vals.get("HER2") and float(vals["HER2"]) >= 3:
+                    add("HER2 3+: 표적치료(Trastuzumab 등) 적합 가능")
+            except: pass
+            try:
+                if vals.get("EF") and float(vals["EF"]) < 50:
+                    add(f"EF {vals['EF']}%: 심기능 저하 → Trastuzumab 주의")
+            except: pass
+        if cancer == "간암(HCC)":
+            try:
+                if vals.get("AFP") and float(vals["AFP"]) > 400:
+                    add(f"AFP {vals['AFP']}: 상승 → 간암 진행 의심")
+            except: pass
+            try:
+                if vals.get("Total Bilirubin") and float(vals["Total Bilirubin"]) > 2:
+                    add(f"Total Bilirubin {vals['Total Bilirubin']}: 상승 → 간기능 저하")
+            except: pass
+        if cancer == "췌장암":
+            try:
+                if vals.get("CA19-9") and float(vals["CA19-9"]) > 37:
+                    add(f"CA19-9 {vals['CA19-9']}: 상승 → 진행/재발 가능성")
+            except: pass
+    # ---- SOLID Tumors ----
+    if cancer == "폐암(NSCLC)":
+        try:
+            if vals.get("CEA") is not None and float(vals["CEA"]) > 5:
+                add(f"CEA {vals['CEA']}: 상승 (재발/진행 평가 참고)")
+        except: pass
+        try:
+            if vals.get("CYFRA21-1") is not None and float(vals["CYFRA21-1"]) > 3.3:
+                add(f"CYFRA 21-1 {vals['CYFRA21-1']}: 상승 (편평상피암/진행 지표 참고)")
+        except: pass
+    if cancer == "유방암":
+        er, pr, her2 = vals.get("ER"), vals.get("PR"), vals.get("HER2")
+        status = []
+        if er: status.append(f"ER: {er}")
+        if pr: status.append(f"PR: {pr}")
+        if her2: status.append(f"HER2: {her2}")
+        if status: add(" / ".join(status))
+        try:
+            if vals.get("LVEF") is not None and float(vals["LVEF"]) < 50:
+                add(f"LVEF {vals['LVEF']}%: 낮음 → 안트라/트라스투주맙 사용 시 심기능 주의")
+        except: pass
+    if cancer == "대장암" or cancer == "위암":
+        try:
+            if vals.get("CEA") is not None and float(vals["CEA"]) > 5:
+                add(f"CEA {vals['CEA']}: 상승")
+        except: pass
+        if cancer == "위암":
+            try:
+                if vals.get("CA19-9") is not None and float(vals["CA19-9"]) > 37:
+                    add(f"CA 19-9 {vals['CA19-9']}: 상승")
+            except: pass
+        if cancer == "대장암":
+            try:
+                if vals.get("ALP") is not None and float(vals["ALP"]) > 120:
+                    add(f"ALP {vals['ALP']}: 상승 (간/골 전이 평가 참고)")
+            except: pass
+    if cancer == "간암(HCC)":
+        try:
+            if vals.get("AFP") is not None and float(vals["AFP"]) >= 200:
+                add(f"AFP {vals['AFP']}: 고수치")
+        except: pass
+        try:
+            if vals.get("PIVKA-II") is not None and float(vals["PIVKA-II"]) > 40:
+                add(f"PIVKA-II {vals['PIVKA-II']}: 상승")
+        except: pass
+    if cancer == "췌장암":
+        try:
+            if vals.get("CA19-9") is not None and float(vals["CA19-9"]) > 37:
+                add(f"CA 19-9 {vals['CA19-9']}: 상승")
+        except: pass
+        for k, th in [("Amylase",100),("Lipase",60)]:
+            try:
+                if vals.get(k) is not None and float(vals[k]) > th:
+                    add(f"{k} {vals[k]}: 상승 (췌장염/담도 병변 감별)")
+            except: pass
+    if cancer == "육종(Sarcoma)":
+        try:
+            if vals.get("ALP") is not None and float(vals["ALP"]) > 120:
+                add(f"ALP {vals['ALP']}: 상승 (골성 병변/전이 평가 참고)")
+        except: pass
+    return notes
+
+
 # -------------- Helpers --------------
 def entered(v):
     try:
@@ -220,10 +462,13 @@ else:
         extras["abx"] = st.multiselect("사용 중인 항생제", list(ABX_GUIDE.keys()))
 
 st.divider()
+
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
 
-# Number inputs in fixed order (mobile-safe, single column)
 vals = {}
+
+# Base panel
+st.markdown("**기본 패널**")
 for name in ORDER:
     if name == "CRP":
         vals[name] = st.number_input(f"{name}", step=0.01, format="%.2f")
@@ -232,15 +477,40 @@ for name in ORDER:
     else:
         vals[name] = st.number_input(f"{name}", step=0.1)
 
+# Cancer-specific extra panel
+extra_panel = get_extra_panel(group, cancer)
+if extra_panel:
+    st.markdown("**암종류 추가 패널**")
+    for item in extra_panel:
+        if item["type"] == "num":
+            vals[item["key"]] = st.number_input(item["label"], step=item.get("step", 0.1))
+        elif item.get("type") == "select":
+            opts = item.get("options", ["Unknown","Negative","Positive"])
+            vals[item["key"]] = st.selectbox(item["label"], opts)
+        elif item.get("type") == "text":
+            vals[item["key"]] = st.text_input(item["label"])
+        else:
+            # alias/no input
+            pass
+
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
+
 
 # -------------- RUN --------------
 if run:
     st.subheader("📋 해석 결과")
 
-    lines = interpret_labs(vals, extras)
-    for line in lines: st.write(line)
+    
+lines = interpret_labs(vals, extras)
+for line in lines: st.write(line)
+# Cancer-specific interpretations
+if cancer:
+    cs = interpret_cancer_specific(cancer, vals, group)
+    if cs:
+        st.markdown("### 🧬 암종류 특이 해석")
+        for c in cs: st.write(c)
+
 
     # 음식 가이드
     fs = food_suggestions(vals)
@@ -324,3 +594,4 @@ else:
         st.info("아직 저장된 기록이 없습니다.")
 
 st.caption("✅ 모바일/PC 모두 한 줄 한 줄 **세로 정렬** 고정. CRP는 0.01 단위로 입력됩니다.")
+
