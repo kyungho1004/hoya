@@ -1,5 +1,4 @@
 
-import json
 from datetime import datetime, date
 import streamlit as st
 
@@ -11,12 +10,10 @@ except Exception:
 
 # ===== 기본 설정 =====
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (통합본 v2.9++ / Direct Input)")
+st.title("🩸 피수치 자동 해석기 (v3.1 / Direct Input + 암별 디테일 패널)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
-# 👇 공식카페 고정 배너
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
-
-st.caption("✅ **+ 버튼 없이 직접 타이핑 입력 모드**로 전면 전환했습니다. (모바일 줄꼬임 방지: 기본 세로 / PC 표 모드 선택) · ATRA는 정수, ARA-C는 제형+용량.")
+st.caption("✅ +버튼 없이 **직접 타이핑 입력** · 모바일 줄꼬임 방지(세로 고정) · PC 표 모드 선택 · **암별 디테일 수치** 지원 · ATRA=정수, ARA-C=제형+용량")
 
 if "records" not in st.session_state:
     st.session_state.records = {}
@@ -54,22 +51,66 @@ ANTICANCER = {
     "Ifosfamide":{"alias":"이포스파미드","aes":["골수억제","신경독성","출혈성 방광염"],"warn":["메스나 병용/수분섭취"],"ix":[]},
 }
 
-HEMATO = {
-    "AML": {"note":"ANC 최우선 모니터링, Ara-C 사용 시 간/신장 수치 주의","extra_tests":["PT","aPTT","Fibrinogen"],"drugs":["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","Vincristine","MTX","ATRA"]},
-    "APL": {"note":"DIC 동반 위험: PT/aPTT/피브리노겐, D-dimer; 분화증후군 주의","extra_tests":["PT","aPTT","Fibrinogen","D-dimer","DIC Score"],"drugs":["ATRA","ARA-C","Idarubicin","Daunorubicin","G-CSF","Hydroxyurea"]},
-    "ALL": {"note":"CNS prophylaxis 고려; 빈혈/혈소판 주기적 점검","extra_tests":["PT","aPTT"],"drugs":["Vincristine","MTX","Cyclophosphamide","Daunorubicin","ARA-C","G-CSF","Etoposide","Topotecan","Fludarabine","Hydroxyurea"]},
-    "CML": {"note":"WBC↑↑ 가능, LDH↑; BCR-ABL PCR 추적","extra_tests":["BCR-ABL PCR"],"drugs":["Hydroxyurea","Cyclophosphamide","ARA-C","G-CSF"]},
-    "CLL": {"note":"림프구 비율↑, 저감마글로불린혈증 가능","extra_tests":["면역글로불린"],"drugs":["Fludarabine","Cyclophosphamide","Mitoxantrone","Etoposide","Hydroxyurea","G-CSF"]},
-}
-
-SOLID = {
-    "폐암(NSCLC)": {"note":"간/신장 수치와 호중구 모니터","extra_tests":[],"drugs":["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine","5-FU"]},
-    "유방암": {"note":"심기능 모니터(안트라사이클린/트라스투주맙)","extra_tests":[],"drugs":["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Carboplatin","Trastuzumab"]},
-    "대장암": {"note":"옥살리플라틴 말초신경, 5-FU/Capecitabine 수족증후군","extra_tests":[],"drugs":["Oxaliplatin","5-FU","Capecitabine","Irinotecan"]},
-    "위암": {"note":"백금계+플루오로피리미딘 조합 흔함","extra_tests":[],"drugs":["Cisplatin","Carboplatin","5-FU","Capecitabine","Paclitaxel","Docetaxel"]},
-    "간암(HCC)": {"note":"간기능 악화 위험; 간수치·빌리루빈 면밀 확인","extra_tests":[],"drugs":["Doxorubicin","Cisplatin","5-FU","Gemcitabine"]},
-    "췌장암": {"note":"혈구감소/영양 저하 위험; 전신 상태 관찰","extra_tests":[],"drugs":["Gemcitabine","5-FU","Oxaliplatin","Irinotecan","Capecitabine"]},
-    "육종(Sarcoma)": {"note":"안트라사이클린 기반 많이 사용","extra_tests":[],"drugs":["Doxorubicin","Ifosfamide","Cyclophosphamide","Gemcitabine","Docetaxel","Paclitaxel"]},
+# 암별 디테일 패널 정의: (키, 라벨, 단위, 소수자리) 리스트
+CANCER_SPECIFIC = {
+    # 혈액암
+    "AML": [
+        ("PT", "PT", "sec", 1),
+        ("aPTT", "aPTT", "sec", 1),
+        ("Fibrinogen", "Fibrinogen", "mg/dL", 1),
+        ("D-dimer", "D-dimer", "µg/mL FEU", 2),
+        ("Blasts%", "말초 혈액 blasts", "%", 0),
+    ],
+    "APL": [
+        ("PT", "PT", "sec", 1),
+        ("aPTT", "aPTT", "sec", 1),
+        ("Fibrinogen", "Fibrinogen", "mg/dL", 1),
+        ("D-dimer", "D-dimer", "µg/mL FEU", 2),
+        ("DIC Score", "DIC Score", "pt", 0),
+    ],
+    "ALL": [
+        ("PT", "PT", "sec", 1),
+        ("aPTT", "aPTT", "sec", 1),
+        ("CNS Sx", "CNS 증상 여부(0/1)", "", 0),
+    ],
+    "CML": [
+        ("BCR-ABL PCR", "BCR-ABL PCR", "%IS", 2),
+        ("Basophil%", "기저호산구(Baso) 비율", "%", 1),
+    ],
+    "CLL": [
+        ("IgG", "면역글로불린 IgG", "mg/dL", 0),
+        ("IgA", "면역글로불린 IgA", "mg/dL", 0),
+        ("IgM", "면역글로불린 IgM", "mg/dL", 0),
+    ],
+    # 고형암
+    "폐암(NSCLC)": [
+        ("CEA", "CEA", "ng/mL", 1),
+    ],
+    "유방암": [
+        ("CA15-3", "CA15-3", "U/mL", 1),
+        ("CEA", "CEA", "ng/mL", 1),
+        ("LVEF", "좌심실 구혈률(LVEF)", "%", 0),
+    ],
+    "대장암": [
+        ("CEA", "CEA", "ng/mL", 1),
+    ],
+    "위암": [
+        ("CEA", "CEA", "ng/mL", 1),
+        ("CA19-9", "CA19-9", "U/mL", 1),
+    ],
+    "간암(HCC)": [
+        ("AFP", "AFP", "ng/mL", 1),
+        ("PIVKA-II", "PIVKA-II(DCP)", "mAU/mL", 0),
+        ("Albumin-bilirubin", "ALBI Score", "", 2),
+    ],
+    "췌장암": [
+        ("CA19-9", "CA19-9", "U/mL", 1),
+        ("Bilirubin_direct", "직접빌리루빈", "mg/dL", 2),
+    ],
+    "육종(Sarcoma)": [
+        ("ALP", "ALP", "U/L", 0),
+        ("CK", "CK", "U/L", 0),
+    ],
 }
 
 ABX_GUIDE = {
@@ -99,7 +140,7 @@ def _parse_numeric(text, default=0.0, as_int=False, decimals=None):
     s = str(text).strip()
     if s == "":
         return default
-    s = s.replace(",", "")  # 1,234.5 → 1234.5
+    s = s.replace(",", "")
     try:
         v = float(s)
         if as_int:
@@ -111,7 +152,6 @@ def _parse_numeric(text, default=0.0, as_int=False, decimals=None):
         return default
 
 def num_input(label, key, placeholder="", as_int=False, decimals=None):
-    # Streamlit의 number_input 대신 text_input으로 항상 직접 타이핑
     raw = st.text_input(label, key=key, placeholder=placeholder, label_visibility="visible")
     return _parse_numeric(raw, as_int=as_int, decimals=decimals)
 
@@ -215,15 +255,12 @@ with c2:
 
 group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암"])
 cancer = None
-catalog = None
 if group == "혈액암":
-    cancer = st.selectbox("혈액암 종류", list(HEMATO.keys()))
-    catalog = HEMATO[cancer]
+    cancer = st.selectbox("혈액암 종류", ["AML","APL","ALL","CML","CLL"])
 elif group == "고형암":
-    cancer = st.selectbox("고형암 종류", list(SOLID.keys()))
-    catalog = SOLID[cancer]
+    cancer = st.selectbox("고형암 종류", ["폐암(NSCLC)","유방암","대장암","위암","간암(HCC)","췌장암","육종(Sarcoma)"])
 else:
-    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 주의 검사**가 자동 노출됩니다.")
+    st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 추가 수치 패널**이 자동 노출됩니다.")
 
 # PC 표 모드 스위치 (모바일 기본 세로)
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
@@ -231,14 +268,20 @@ table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일�
 meds = {}
 extras = {}
 
-if catalog:
-    st.markdown(f"🧾 **암종류 노트:** {catalog['note']}")
-    if catalog.get("extra_tests"):
-        st.markdown("🔎 **추가 권장 검사:** " + ", ".join(catalog["extra_tests"]))
-
-    # 💊 항암제 입력 (항상 펼침 / 직접 타이핑)
+# ===== 항암제 입력(요약) =====
+if group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
-    drug_list = list(catalog.get("drugs", []))
+    # 필수: ARA-C 처리
+    default_drugs_by_group = {
+        "혈액암": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","Vincristine","MTX","ATRA"],
+        "고형암": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine","5-FU","Doxorubicin","Cyclophosphamide","Trastuzumab","Oxaliplatin","Capecitabine","Irinotecan","Ifosfamide","Docetaxel","Paclitaxel"],
+    }
+    drug_list = list(dict.fromkeys(default_drugs_by_group["혈액암"] if group=="혈액암" else default_drugs_by_group["고형암"]))
+
+    def num_input(label, key, placeholder="", as_int=False, decimals=None):
+        raw = st.text_input(label, key=key, placeholder=placeholder, label_visibility="visible")
+        return _parse_numeric(raw, as_int=as_int, decimals=decimals)
+
     if "ARA-C" in drug_list:
         st.markdown("**ARA-C (시타라빈)**")
         ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
@@ -247,6 +290,7 @@ if catalog:
             meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
         st.divider()
         drug_list.remove("ARA-C")
+
     for d in drug_list:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
@@ -256,28 +300,22 @@ if catalog:
         if amt and float(amt)>0:
             meds[d] = {"dose_or_tabs": amt}
 
-    # 🧪 항생제 입력 (직접 타이핑)
-    st.markdown("### 🧪 항생제 입력 (0=미사용)")
-    extras["abx"] = {}
-    for abx in ABX_GUIDE.keys():
-        extras["abx"][abx] = num_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
+# ===== 항생제/이뇨제 (항상 노출) =====
+def num_input_generic(label, key, placeholder="", as_int=False, decimals=None):
+    raw = st.text_input(label, key=key, placeholder=placeholder, label_visibility="visible")
+    return _parse_numeric(raw, as_int=as_int, decimals=decimals)
 
-    # 💧 동반 약물/상태
-    st.markdown("### 💧 동반 약물/상태")
-    extras["diuretic_amt"] = num_input("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
+st.markdown("### 🧪 항생제 입력 (0=미사용)")
+extras["abx"] = {}
+for abx in ["페니실린계","세팔로스포린계","마크롤라이드","플루오로퀴놀론","카바페넴","TMP-SMX","메트로니다졸","반코마이신"]:
+    extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
 
-else:
-    # 암 그룹 미선택이어도 항생제/이뇨제는 바로 입력 가능
-    st.markdown("### 🧪 항생제 입력 (0=미사용)")
-    extras["abx"] = {}
-    for abx in ABX_GUIDE.keys():
-        extras["abx"][abx] = num_input(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
-    st.markdown("### 💧 동반 약물/상태")
-    extras["diuretic_amt"] = num_input("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
+st.markdown("### 💧 동반 약물/상태")
+extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
-# ===== UI 2) 혈액 수치 입력 (직접 타이핑) =====
+# ===== UI 2) 기본 혈액 수치 입력 =====
 st.divider()
-st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
+st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
 
 vals = {}
 
@@ -285,11 +323,11 @@ def render_inputs_vertical():
     st.markdown("**기본 패널**")
     for name in ORDER:
         if name == "CRP":
-            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
         elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
         else:
-            vals[name] = num_input(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
 
 def render_inputs_table():
     st.markdown("**기본 패널 (표 모드)**")
@@ -298,26 +336,39 @@ def render_inputs_table():
     with left:
         for name in ORDER[:half]:
             if name == "CRP":
-                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = num_input(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
     with right:
         for name in ORDER[half:]:
             if name == "CRP":
-                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = num_input(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
 
-if st.checkbox("⚙️ PC용 표 모드(가로형) 사용", value=False, key="table_mode_help", help="PC에서만 권장. 모바일은 세로형이 가장 안정적입니다."):
+if table_mode:
     render_inputs_table()
 else:
     render_inputs_vertical()
 
-# ===== 해석 실행 =====
+# ===== UI 3) 암별 디테일 패널 =====
+extra_vals = {}
+if group != "미선택/일반" and cancer:
+    items = CANCER_SPECIFIC.get(cancer, [])
+    if items:
+        st.divider()
+        st.header("3️⃣ 암별 디테일 수치")
+        st.caption("해석은 주치의 판단을 따르며, 값 기록/공유를 돕기 위한 입력 영역입니다.")
+        for key, label, unit, decs in items:
+            ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
+            val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
+            extra_vals[key] = val
+
+# ===== 실행 =====
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
 
@@ -325,6 +376,14 @@ if run:
     st.subheader("📋 해석 결과")
     lines = interpret_labs(vals, extras)
     for line in lines: st.write(line)
+
+    # 암별 디테일 요약(값만 정리)
+    if extra_vals:
+        shown = [ (k, v) for k, v in extra_vals.items() if entered(v) ]
+        if shown:
+            st.markdown("### 🧬 암별 디테일 수치")
+            for k, v in shown:
+                st.write(f"- {k}: {v}")
 
     # 음식 가이드
     fs = food_suggestions(vals)
@@ -357,12 +416,17 @@ if run:
     else:
         buf.append(f"- 암 그룹/종류: 미선택\n")
     buf.append("- 검사일: {}\n".format(test_date.isoformat()))
-    buf.append("\n## 입력 수치\n")
+    buf.append("\n## 입력 수치(기본)\n")
     for k in ORDER:
         v = vals.get(k)
         if entered(v):
             if k == "CRP": buf.append(f"- {k}: {float(v):.2f}\n")
             else: buf.append(f"- {k}: {_fmt(k, v)}\n")
+    if extra_vals:
+        buf.append("\n## 암별 디테일 수치\n")
+        for k, v in extra_vals.items():
+            if entered(v):
+                buf.append(f"- {k}: {v}\n")
     if meds:
         buf.append("\n## 항암제 요약\n")
         for line in summarize_meds(meds): buf.append(line + "\n")
@@ -381,6 +445,7 @@ if run:
             "group": group,
             "cancer": cancer,
             "labs": {k: vals.get(k) for k in ORDER if entered(vals.get(k))},
+            "extra": {k: v for k, v in extra_vals.items() if entered(v)},
             "meds": meds,
             "extras": extras,
         }
@@ -407,5 +472,4 @@ else:
     else:
         st.info("아직 저장된 기록이 없습니다.")
 
-# 하단 푸터에도 공식카페 안내
-st.caption("📱 줄꼬임 방지: 모바일 세로 고정, PC 표 모드 제공.  |  📌 공식카페: https://cafe.naver.com/bloodmap")
+st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별 디테일 패널 포함. 공식카페: https://cafe.naver.com/bloodmap")
