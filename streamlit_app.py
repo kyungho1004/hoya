@@ -24,8 +24,8 @@ ORDER = [
 
 # --- Drug dictionary (summary only) ---
 ANTICANCER = {
-    # Core heme (existing)
-    "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
+    # Core heme
+    "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 독성↑","일부 PPI"]},
     "ATRA":{"alias":"트레티노인(ATRA)","aes":["분화증후군","발열","피부/점막 건조","두통"],"warn":["분화증후군 의심 시 즉시 병원"],"ix":["테트라사이클린계와 가성뇌종양"]},
     "ATO":{"alias":"아산화비소(ATO)","aes":["QT 연장","저K/저Mg 시 위험↑","피부 반응"],"warn":["심전도·전해질 모니터"],"ix":[]},
@@ -43,19 +43,19 @@ ANTICANCER = {
     # Latest heme add-ons
     "Venetoclax":{"alias":"베네토클락스","aes":["종양용해증후군","혈구감소"],"warn":["용량 단계↑·수분/알로푸리놀"],"ix":["강력 CYP3A 억제제 병용 시 용량↓"]},
     "Midostaurin":{"alias":"미도스타우린(FLT3)","aes":["오심/구토","QT 연장"],"warn":["FLT3 변이 대상"],"ix":["CYP3A"]},
-    "Gilteritinib":{"alias":"길테리티닙(FLT3)","aes":["간수치 상승","QT 연장"],"warn":["FLT3 변이 대상"],"ix":["CYP3A"]},
+    "Gilteritinib":{"alias":"길테리티닛(FLT3)","aes":["간수치 상승","QT 연장"],"warn":["FLT3 변이 대상"],"ix":["CYP3A"]},
     "Ivosidenib":{"alias":"이보시데닙(IDH1)","aes":["분화증후군","QT 연장"],"warn":["IDH1 변이 대상"],"ix":["CYP3A"]},
     "Enasidenib":{"alias":"에나시데닙(IDH2)","aes":["분화증후군","고빌리루빈혈증"],"warn":["IDH2 변이 대상"],"ix":[]},
     "Azacitidine":{"alias":"아자시티딘","aes":["골수억제","주사부위 반응"],"warn":["감염 모니터"],"ix":[]},
     "Decitabine":{"alias":"데시타빈","aes":["골수억제"],"warn":["감염 모니터"],"ix":[]},
     "CPX-351":{"alias":"CPX-351(리포솜 다우노+시타라빈)","aes":["골수억제","점막염"],"warn":["고령/이차성 AML 근거"],"ix":[]},
-    "GemtuzumabOzogamicin":{"alias":"겜투주맙 오조가마이신(GO)","aes":["간독성(VOD)","혈구감소"],"warn":["용량·간기능 모니터"],"ix":[]},
+    "GemtuzumabOzogamicin":{"alias":"겜투주맙 오조가마이신(GO)","aes":["간독성(VOD)","혈구감소"],"warn":["간기능 모니터"],"ix":[]},
 
     "Imatinib":{"alias":"이미티닙(TKI)","aes":["부종","근육통"],"warn":["간기능·혈구 모니터"],"ix":["CYP3A"]},
     "Dasatinib":{"alias":"다사티닙(TKI)","aes":["흉수","혈소판 감소"],"warn":["흉수 증상 모니터"],"ix":["제산제와 흡수↓"]},
     "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","대사이상"],"warn":["공복 복용·심전도"],"ix":["CYP3A"]},
     "Bosutinib":{"alias":"보수티닙(TKI)","aes":["설사","간수치 상승"],"warn":["간기능"],"ix":["CYP3A"]},
-    "Ponatinib":{"alias":"포나티닙(TKI)","aes":["혈전·동맥사건","HTN"],"warn":["T315I 변이 등 고위험"],"ix":["CYP3A"]},
+    "Ponatinib":{"alias":"포나티닙(TKI)","aes":["혈전·동맥사건","HTN"],"warn":["T315I 변이 등"],"ix":["CYP3A"]},
     "Asciminib":{"alias":"아시미닙(STAMP)","aes":["혈구감소","췌장효소↑"],"warn":["CML 치료경험자"],"ix":["CYP3A"]},
 
     # Solid tumor common + targeted/immuno
@@ -71,7 +71,7 @@ ANTICANCER = {
 
     "Trastuzumab":{"alias":"트라스투주맙(HER2)","aes":["심기능저하"],"warn":["심초음파"],"ix":[]},
     "Pertuzumab":{"alias":"퍼투주맙(HER2)","aes":["설사"],"warn":["HER2 양성 대상"],"ix":[]},
-    "T-DM1":{"alias":"아도-트라스투주맙 엠탄신","aes":["혈구감소","간독성"],"warn":["HER2 양성 재발/전이"],"ix":[]},
+    "T-DM1":{"alias":"아도-트라스투주맙 엠탄신","aes":["혈구감소","간독성"],"warn":["HER2 양성"],"ix":[]},
     "T-DXd":{"alias":"트라스투주맙 데룩테칸","aes":["간질성폐질환(ILD)"],"warn":["호흡기 증상 모니터"],"ix":[]},
     "Tamoxifen":{"alias":"타목시펜(ET)","aes":["혈전증","자궁내막변화"],"warn":[],"ix":["강력 CYP 억제제 주의"]},
     "Letrozole":{"alias":"레트로졸(ET)","aes":["골다공증","관절통"],"warn":[],"ix":[]},
@@ -98,7 +98,23 @@ ANTICANCER = {
     "Abiraterone":{"alias":"아비라테론","aes":["저K","체액저류"],"warn":["프레드니손 병용"],"ix":["CYP3A"]},
     "Enzalutamide":{"alias":"엔잘루타마이드","aes":["피로","고혈압"],"warn":[],"ix":["CYP3A"]},
     "Apalutamide":{"alias":"아팔루타마이드","aes":["발진","갑상선이상"],"warn":[],"ix":[]},
+
+    # --- Sarcoma specific agents ---
+    "Ifosfamide":{"alias":"이포스파미드","aes":["골수억제","신경독성","출혈성 방광염"],"warn":["메스나 병용·수분섭취"],"ix":[]},
+    "Dacarbazine":{"alias":"다카바진(DTIC)","aes":["오심/구토","골수억제","광과민"],"warn":[],"ix":[]},
+    "Trabectedin":{"alias":"트라벡테딘","aes":["간독성","횡문근융해"],"warn":["CK·간기능 모니터"],"ix":[]},
+    "Eribulin":{"alias":"에리불린","aes":["호중구감소","말초신경병증"],"warn":[],"ix":[]},
+    "Pazopanib":{"alias":"파조파닙","aes":["고혈압","간독성"],"warn":["혈압·간기능"],"ix":["CYP3A"]},
+    "Sunitinib":{"alias":"수니티닙","aes":["피로","HTN","손발증후군"],"warn":[],"ix":["CYP3A"]},
+    "Ripretinib":{"alias":"리프레티닙","aes":["손발증후군","HTN"],"warn":[],"ix":[]},
 }
+
+# Regimen placeholders
+ANTICANCER.update({
+    "VDC/IE":{"alias":"빈크+다우노+사이클로 / 이포스+에토포","aes":["중증 골수억제"],"warn":["입원·지원요법"],"ix":[]},
+    "MAP":{"alias":"고용량 MTX+독소루비신+시스플라틴","aes":["신독성/심독성/점막염"],"warn":["MTX 모니터·류코보린"],"ix":[]},
+    "FOLFIRINOX":{"alias":"FOL+5-FU/LV+이리노+옥살리","aes":["심한 골수억제","설사","신경병증"],"warn":["상태양호 환자"],"ix":[]},
+})
 
 # --- Cancer sets (heme + solid subtypes) ---
 CANCER_HEME = {
@@ -108,15 +124,6 @@ CANCER_HEME = {
     "CML": ["Imatinib","Dasatinib","Nilotinib","Bosutinib","Ponatinib","Asciminib","Hydroxyurea","G-CSF"],
     "CLL": ["Fludarabine","Cyclophosphamide","Venetoclax","G-CSF"],
 }
-
-# Add missing entries to ANTICANCER for ALL extras
-ANTICANCER.update({
-    "Pegaspargase":{"alias":"페그아스파라기나제","aes":["알레르기/췌장염","혈전"],"warn":["지질·혈당·췌장효소 모니터"],"ix":[]},
-    "Nelarabine":{"alias":"넬라라빈(T-ALL)","aes":["신경독성"],"warn":[],"ix":[]},
-    "Inotuzumab":{"alias":"이노투주맙","aes":["간독성(VOD)"],"warn":["간기능 모니터"],"ix":[]},
-    "Blinatumomab":{"alias":"블리나투모맙(BiTE)","aes":["CRS","신경독성"],"warn":["입원·모니터"],"ix":[]},
-    "Ponatinib":{"alias":"포나티닙(TKI)","aes":["혈전·동맥사건"],"warn":["T315I 변이 고려"],"ix":["CYP3A"]},
-})
 
 CANCER_SOLID = {
     "유방암": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab","T-DM1","T-DXd","Letrozole","Tamoxifen","Palbociclib","Olaparib"],
@@ -129,12 +136,12 @@ CANCER_SOLID = {
     "난소암": ["Carboplatin","Paclitaxel","Bevacizumab","Olaparib"],
     "자궁경부암": ["Cisplatin","Paclitaxel","Bevacizumab","Pembrolizumab"],
     "전립선암": ["Docetaxel","Abiraterone","Enzalutamide","Apalutamide"],
+    # Sarcoma subdivided
+    "육종(연부조직)": ["Doxorubicin","Ifosfamide","Dacarbazine","Gemcitabine","Docetaxel","Trabectedin","Eribulin","Pazopanib"],
+    "육종(골/뼈: 골육종)": ["MAP","Ifosfamide"],
+    "육종(골/뼈: 유잉육종)": ["VDC/IE"],
+    "GIST(위장관기질종양)": ["Imatinib","Sunitinib","Regorafenib","Ripretinib"],
 }
-
-# Add regimen placeholders
-ANTICANCER.update({
-    "FOLFIRINOX":{"alias":"FOL+5-FU/LV+이리노+옥살리","aes":["심한 골수억제","설사","신경병증"],"warn":["상태양호 환자에 적합"],"ix":[]},
-})
 
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 IRON_WARN = "⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의. (비타민C 병용 시 흡수↑)"
@@ -241,6 +248,8 @@ elif category == "투석 환자":
     extras["urine_ml"] = st.number_input("하루 소변량 (mL)", min_value=0.0, step=10.0)
     extras["hd_today"] = st.checkbox("오늘 투석 시행")
     extras["post_hd_weight_delta"] = st.number_input("투석 후 체중 변화 (kg)", min_value=-10.0, max_value=10.0, step=0.1)
+    # NEW: Salinity measurement (soup/국물 염도)
+    extras["soup_salinity_pct"] = st.number_input("염도측정 (국물/음식 염도, %)", min_value=0.0, max_value=3.0, step=0.01, help="예: 0.8% 미만 권장")
     if st.checkbox("이뇨제 복용 중", key="diuretic_on_dial"):
         extras["diuretic"] = True
 
@@ -294,6 +303,20 @@ nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
 
+def render_dialysis_salinity(sal_pct: float):
+    if not sal_pct or sal_pct <= 0:
+        return None, None
+    if sal_pct >= 1.0:
+        status = "높음"
+        tip = "국·찌개 염도 낮추기(물 추가, 건더기 위주), 외식 국물은 남기기, 나트륨 섭취 제한 강화."
+    elif sal_pct >= 0.8:
+        status = "경계"
+        tip = "가능하면 0.8% 미만으로 조정. 인스턴트/젓갈/장아찌 빈도 줄이기."
+    else:
+        status = "양호"
+        tip = "현재 유지. 체중증가/부종 있으면 추가로 조절."
+    return status, tip
+
 if run:
     st.subheader("📋 해석 결과")
     lines = interpret_labs(labs)
@@ -311,7 +334,22 @@ if run:
 
     if category == "항생제" and extras.get("abx"):
         st.markdown("### 🧪 항생제 주의 요약")
-        for a in extras["abx"]: st.write(f"• {a}: {', '.join(ABX_GUIDE[a])}")
+        for a in extras["abx"]: st.write(f"• {a}")
+
+    if category == "투석 환자":
+        st.markdown("### 🫧 투석 특이 해석")
+        # Salinity block
+        sal = extras.get("soup_salinity_pct", 0.0)
+        status, tip = render_dialysis_salinity(sal)
+        if status:
+            st.write(f"• 염도측정: {sal:.2f}% → **{status}**")
+            st.write(f"  - 권장: {tip}")
+            st.caption("일반 권장치: 국/찌개 염도 **0.8% 미만**을 목표로 합니다.")
+        # Interdialytic weight and sodium tie-in
+        if entered(labs.get("Na")) and labs["Na"]>145:
+            st.write("• 혈중 나트륨 상승 → 수분 제한/염도 조절 필요.")
+        if extras.get("post_hd_weight_delta") is not None:
+            st.write(f"• 투석 후 체중 변화: {extras['post_hd_weight_delta']} kg")
 
     st.markdown("### 🌡️ 발열 가이드")
     st.write("ANC<500 + 발열은 응급입니다.")
@@ -329,6 +367,18 @@ if run:
     if 'extras' in locals() and extras.get("abx"):
         buf.append("\n## 항생제 주의\n")
         for a in extras["abx"]: buf.append(f"- {a}\n")
+    if category == "투석 환자":
+        buf.append("\n## 투석 특이 해석\n")
+        sal = extras.get("soup_salinity_pct", 0.0)
+        status, tip = render_dialysis_salinity(sal)
+        if status:
+            buf.append(f"- 염도측정: {sal:.2f}% → {status}\n")
+            buf.append(f"  - 권장: {tip}\n")
+        if entered(labs.get("Na")) and labs["Na"]>145:
+            buf.append("- 혈중 나트륨 상승 → 수분 제한/염도 조절 필요.\n")
+        if extras.get("post_hd_weight_delta") is not None:
+            buf.append(f"- 투석 후 체중 변화: {extras['post_hd_weight_delta']} kg\n")
+
     buf.append("\n## 발열 가이드\n" + FEVER_GUIDE + "\n")
     buf.append("\n---\n제작: Hoya / 자문: GPT\n")
     report_md = "".join(buf)
@@ -372,5 +422,3 @@ else:
             st.info("선택한 별명의 저장 기록이 없습니다.")
     else:
         st.info("아직 저장된 기록이 없습니다.")
-
-
