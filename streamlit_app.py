@@ -1,3 +1,4 @@
+
 import json
 from datetime import datetime, date
 import streamlit as st
@@ -8,6 +9,7 @@ try:
 except Exception:
     HAS_PD = False
 
+# ---------- 기본 설정 (모바일 줄꼬임 방지: 기본 세로형, PC에서만 표 모드 선택) ----------
 st.set_page_config(page_title="피수치 자동 해석기 by Hoya", layout="centered")
 st.title("🩸 피수치 자동 해석기 (통합본 v2.9+ / Unified Numeric)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
@@ -18,6 +20,7 @@ if "records" not in st.session_state:
 
 ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Protein","AST","ALT","LDH","CRP","Cr","UA","TB","BUN","BNP"]
 
+# ---------- 약물/가이드 데이터 ----------
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],"warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],"ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],"warn":["탈수 시 독성↑","고용량 후 류코보린"],"ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
@@ -66,8 +69,6 @@ SOLID = {
     "육종(Sarcoma)": {"note":"안트라사이클린 기반 많이 사용","extra_tests":[],"drugs":["Doxorubicin","Ifosfamide","Cyclophosphamide","Gemcitabine","Docetaxel","Paclitaxel"]},
 }
 
-INT_DRUGS = {"ATRA"}
-
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
     "세팔로스포린계":["설사","일부 알코올과 병용 시 플러싱 유사"],
@@ -86,24 +87,51 @@ FOODS = {
     "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
     "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
 }
+
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
+# ---------- 유틸 ----------
 def entered(v):
     try:
         return v is not None and float(v) != 0
     except Exception:
         return False
 
+def _fmt(name, val):
+    try:
+        v = float(val)
+    except Exception:
+        return str(val)
+    if name == "CRP":
+        return f"{v:.2f}"
+    if name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
+        return f"{int(v)}" if v.is_integer() else f"{v:.1f}"
+    return f"{v:.1f}"
+
 def interpret_labs(l, extras):
     out=[]
     def add(s): out.append("- " + s)
-    if entered(l.get("WBC")): add(f"WBC {l['WBC']}: " + ("낮음 → 감염 위험↑" if l["WBC"]<4 else "높음 → 감염/염증 가능" if l["WBC"]>10 else "정상"))
-    if entered(l.get("Hb")): add(f"Hb {l['Hb']}: " + ("낮음 → 빈혈" if l["Hb"]<12 else "정상"))
-    if entered(l.get("PLT")): add(f"혈소판 {l['PLT']}: " + ("낮음 → 출혈 위험" if l["PLT"]<150 else "정상"))
-    if entered(l.get("ANC")): add(f"ANC {l['ANC']}: " + ("중증 감소(<500)" if l["ANC"]<500 else "감소(<1500)" if l["ANC"]<1500 else "정상"))
-    if entered(l.get("Albumin")): add(f"Albumin {l['Albumin']}: " + ("낮음 → 영양/염증/간질환 가능" if l["Albumin"]<3.5 else "정상"))
-    if entered(l.get("Glucose")): add(f"Glucose {l['Glucose']}: " + ("고혈당(≥200)" if l["Glucose"]>=200 else "저혈당(<70)" if l["Glucose"]<70 else "정상"))
-    if entered(l.get("CRP")): add(f"CRP {l['CRP']}: " + ("상승 → 염증/감염 의심" if l["CRP"]>0.5 else "정상"))
+    if entered(l.get("WBC")):
+        v = l["WBC"]
+        add(f"WBC {_fmt('WBC', v)}: " + ("낮음 → 감염 위험↑" if v<4 else "높음 → 감염/염증 가능" if v>10 else "정상"))
+    if entered(l.get("Hb")):
+        v = l["Hb"]
+        add(f"Hb {_fmt('Hb', v)}: " + ("낮음 → 빈혈" if v<12 else "정상"))
+    if entered(l.get("PLT")):
+        v = l["PLT"]
+        add(f"혈소판 {_fmt('PLT', v)}: " + ("낮음 → 출혈 위험" if v<150 else "정상"))
+    if entered(l.get("ANC")):
+        v = l["ANC"]
+        add(f"ANC {_fmt('ANC', v)}: " + ("중증 감소(<500)" if v<500 else "감소(<1500)" if v<1500 else "정상"))
+    if entered(l.get("Albumin")):
+        v = l["Albumin"]
+        add(f"Albumin {_fmt('Albumin', v)}: " + ("낮음 → 영양/염증/간질환 가능" if v<3.5 else "정상"))
+    if entered(l.get("Glucose")):
+        v = l["Glucose"]
+        add(f"Glucose {_fmt('Glucose', v)}: " + ("고혈당(≥200)" if v>=200 else "저혈당(<70)" if v<70 else "정상"))
+    if entered(l.get("CRP")):
+        v = l["CRP"]
+        add(f"CRP {_fmt('CRP', v)}: " + ("상승 → 염증/감염 의심" if v>0.5 else "정상"))
     if entered(l.get("BUN")) and entered(l.get("Cr")) and l["Cr"]>0:
         ratio=l["BUN"]/l["Cr"]
         if ratio>20: add(f"BUN/Cr {ratio:.1f}: 탈수 의심")
@@ -138,7 +166,20 @@ def summarize_meds(meds: dict):
         out.append(line)
     return out
 
-# ===== UI =====
+def abx_summary(abx_dict):
+    lines=[]
+    for k, amt in abx_dict.items():
+        try:
+            use = float(amt)
+        except Exception:
+            use = 0.0
+        if use > 0:
+            tip = ", ".join(ABX_GUIDE.get(k, []))
+            shown = f"{int(use)}" if use.is_integer() else f"{use:.1f}"
+            lines.append(f"• {k}: {shown}  — 주의: {tip}")
+    return lines
+
+# ---------- UI: 1) 환자/암 정보 ----------
 st.divider()
 st.header("1️⃣ 환자/암 정보")
 
@@ -210,6 +251,7 @@ else:
     st.markdown("### 💧 동반 약물/상태")
     extras["diuretic_amt"] = st.number_input("이뇨제(복용량/회/일, 0=미복용)", min_value=0.0, step=0.1, key="diuretic_amt")
 
+# ---------- UI: 2) 혈액 수치 입력 ----------
 st.divider()
 st.header("2️⃣ 혈액 검사 수치 입력 (입력한 값만 해석)")
 
@@ -251,15 +293,9 @@ if table_mode:
 else:
     render_inputs_vertical()
 
+# ---------- 해석 실행 ----------
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
-
-def abx_summary(abx_dict):
-    lines=[]
-    for k, amt in abx_dict.items():
-        if amt and float(amt)>0:
-            lines.append(f"• {k}: {amt}  — 주의: {', '.join(ABX_GUIDE[k])}")
-    return lines
 
 if run:
     st.subheader("📋 해석 결과")
@@ -288,7 +324,7 @@ if run:
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
-    # 보고서
+    # 보고서 (.md)
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
            f"- 제작자/자문: Hoya / GPT\n"]
     if group != "미선택/일반":
@@ -300,8 +336,8 @@ if run:
     for k in ORDER:
         v = vals.get(k)
         if entered(v):
-            if k == "CRP": buf.append(f"- {k}: {v:.2f}\n")
-            else: buf.append(f"- {k}: {v}\n")
+            if k == "CRP": buf.append(f"- {k}: {float(v):.2f}\n")
+            else: buf.append(f"- {k}: {_fmt(k, v)}\n")
     if meds:
         buf.append("\n## 항암제 요약\n")
         for line in summarize_meds(meds): buf.append(line + "\n")
@@ -313,6 +349,7 @@ if run:
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
 
+    # 저장
     if nickname and nickname.strip():
         rec = {
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -327,6 +364,7 @@ if run:
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
 
+# ---------- 그래프 ----------
 st.markdown("---")
 st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
 if not HAS_PD:
