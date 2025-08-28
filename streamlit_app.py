@@ -27,9 +27,9 @@ except Exception:
 from xml.sax.saxutils import escape
 
 # ===== Page config =====
-st.set_page_config(page_title="피수치 해석 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (v3.11-fixed / 암종별 약제 + 표적치료 포함)")
-st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
+st.set_page_config(page_title="피수치 가이드 by Hoya", layout="centered")
+st.title("🩸 피수치 가이드  (v3.11-fixed / 암종별 약제 + 표적치료 포함)")
+st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
 st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
 
