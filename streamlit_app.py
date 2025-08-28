@@ -782,6 +782,12 @@ if run:
         if meds:
             buf.append("\n## 항암제 요약\n")
             for line in summarize_meds(meds): buf.append(line + "\n")
+        # Include food (diet) guidance in the downloadable report as well
+        _foods_for_report = food_suggestions(vals)
+        if _foods_for_report:
+            buf.append("\n## 음식 가이드\n")
+            for f in _foods_for_report:
+                buf.append("- " + f + "\n")
     elif mode == "소아(일상/호흡기)":
         buf.append("\n## 소아 공통 입력\n")
         def _ent(x):
@@ -904,5 +910,4 @@ else:
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
-
 
