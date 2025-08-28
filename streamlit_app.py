@@ -2,7 +2,28 @@
 from datetime import datetime, date
 import os
 import streamlit as st
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase import pdfmetrics
+from io import BytesIO
 
+pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+
+def md_to_pdf_bytes(md_text: str) -> bytes:
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    style = styles["Normal"]
+    style.fontName = 'HYSMyeongJo-Medium'
+    story = []
+    for line in md_text.strip().split("\\n"):
+        story.append(Paragraph(line.strip(), style))
+        story.append(Spacer(1, 12))
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.read()
 # ===== Optional deps =====
 try:
     import pandas as pd
@@ -783,7 +804,10 @@ if run:
     st.download_button("📝 보고서(.txt) 다운로드", data=report_md.encode("utf-8-sig"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                        mime="text/plain")
-
+pdf_bytes = md_to_pdf_bytes(report_md)
+st.download_button("📄 보고서(.pdf) 다운로드", data=pdf_bytes,
+                   file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                   mime="application/pdf")
     # Save session record
     if nickname and nickname.strip():
         rec = {
