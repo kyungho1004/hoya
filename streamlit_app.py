@@ -37,7 +37,7 @@ if "records" not in st.session_state:
     st.session_state.records = {}
 
 ORDER = ["WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","ANC(호중구,면연력)","Ca(칼슘)","P(인)","Na(나트륨)","K(포타슘)","Albumin(알부민)","Glucose(혈당)","Total Protein(총단백질)",
-         "AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","CRP(염증수치)","Cr(신장수치)","UA(요산수치)","TB(총빌리루빈)","BUN","BNP(심장척도)"]
+         "AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","CRP(염증수치)","Cr(신장수치)","UA(요산수치)","TB(총빌리루빈)","BUN(신장수치)","BNP(심장척도)"]
 
 DISCLAIMER = ("※ 본 자료는 보호자의 이해를 돕기 위한 참고용 정보입니다. "
               "진단 및 처방은 하지 않으며, 모든 의학적 판단은 의료진의 권한입니다. "
