@@ -112,7 +112,7 @@ ANTICANCER = {
     "Asparaginase":{"alias":"아스파라기나제(PEG)","aes":["췌장염","혈전","간독성","과민반응"],
                     "warn":["복통/구토 시 평가"],"ix":[]},
     "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
-           "warn":["ECG/전해질 모니터"],"ix":[]},,
+           "warn":["ECG/전해질 모니터"],"ix":[]},
     "Bevacizumab":{"alias":"베바시주맙(항-VEGF)","aes":["고혈압","단백뇨","출혈/천공 드묾"],"warn":["수술 전후 투여 중지"],"ix":[]},
     "Cetuximab":{"alias":"세툭시맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["KRAS/NRAS WT에서만 효과"],"ix":[]},
     "Panitumumab":{"alias":"파니투뮤맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
