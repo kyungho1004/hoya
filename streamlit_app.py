@@ -28,20 +28,47 @@ from xml.sax.saxutils import escape
 
 # ===== Page config =====
 st.set_page_config(page_title="피수치 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 가이드  (v3.11-fixed / 암종별 약제 + 표적치료 포함)")
-st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT · 📅 {} 기준".format(date.today().isoformat()))
+st.title("🩸 피수치 가이드  (v3.12-labels / 암종별 약제 + 표적치료 포함)")
+st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
 st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
 
 if "records" not in st.session_state:
     st.session_state.records = {}
 
-ORDER = ["WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","ANC(호중구,면연력)","Ca(칼슘)","P(인)","Na(나트륨)","K(포타슘)","Albumin(알부민)","Glucose(혈당)","Total Protein(총단백질)",
-         "AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","CRP(염증수치)","Cr(신장수치)","UA(요산수치)","TB(총빌리루빈)","BUN(신장수치)","BNP(심장척도)"]
+# ---- Label constants (Korean-friendly) ----
+LBL_WBC = "WBC(백혈구)"
+LBL_Hb = "Hb(적혈구)"
+LBL_PLT = "PLT(혈소판)"
+LBL_ANC = "ANC(호중구,면역력)"
+LBL_Ca = "Ca(칼슘)"
+LBL_P = "P(인)"
+LBL_Na = "Na(나트륨)"
+LBL_K = "K(포타슘)"
+LBL_Alb = "Albumin(알부민)"
+LBL_Glu = "Glucose(혈당)"
+LBL_TP = "Total Protein(총단백질)"
+LBL_AST = "AST(간수치)"
+LBL_ALT = "ALT(간세포수치)"
+LBL_LDH = "LDH(유산탈수효소)"
+LBL_CRP = "CRP(염증수치)"
+LBL_Cr = "Cr(신장수치)"
+LBL_UA = "UA(요산수치)"
+LBL_TB = "TB(총빌리루빈)"
+LBL_BUN = "BUN(신장수치)"
+LBL_BNP = "BNP(심장척도)"
 
-DISCLAIMER = ("※ 본 자료는 보호자의 이해를 돕기 위한 참고용 정보입니다. "
-              "진단 및 처방은 하지 않으며, 모든 의학적 판단은 의료진의 권한입니다. "
-              "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다.")
+ORDER = [
+    LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K, LBL_Alb,
+    LBL_Glu, LBL_TP, LBL_AST, LBL_ALT, LBL_LDH, LBL_CRP, LBL_Cr, LBL_UA,
+    LBL_TB, LBL_BUN, LBL_BNP
+]
+
+DISCLAIMER = (
+    "※ 본 자료는 보호자의 이해를 돕기 위한 참고용 정보입니다. "
+    "진단 및 처방은 하지 않으며, 모든 의학적 판단은 의료진의 권한입니다. "
+    "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다."
+)
 
 # ===== Drug dictionaries (including targeted/IO) =====
 ANTICANCER = {
@@ -113,7 +140,7 @@ ANTICANCER = {
                     "warn":["복통/구토 시 평가"],"ix":[]},
     "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
            "warn":["ECG/전해질 모니터"],"ix":[]},
-    # Targeted / IO
+    # Targeted / IO (일부 축약)
     "Bevacizumab":{"alias":"베바시주맙(anti-VEGF)","aes":["고혈압","단백뇨","출혈/천공(드묾)"],"warn":["수술 전후 투여 중지"],"ix":[]},
     "Cetuximab":{"alias":"세툭시맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["KRAS/NRAS WT에서만 효과"],"ix":[]},
     "Panitumumab":{"alias":"파니투무맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
@@ -139,37 +166,37 @@ ANTICANCER = {
     "Pembrolizumab":{"alias":"펨브롤리주맙(PD-1)","aes":["면역관련 이상반응(피부, 갑상선, 폐렴, 대장염 등)"],
                      "warn":["증상 발생 시 스테로이드 치료 고려, 지연발현 가능"],"ix":[]},
     "Nivolumab":{"alias":"니볼루맙(PD-1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육/모니터"],"ix":[]},
-    "Avelumab":{"alias":"\uc544\ubca8\ub8e8\ub9d9(PD-L1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
-    "Durvalumab":{"alias":"\ub354\ubc1c\ub8e8\ub9d9(PD-L1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
-    "Ipilimumab":{"alias":"\uc774\ud544\ub9ac\ubb34\ub9d9(CTLA-4)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751\u2191"], "warn":["\uace0\uc6a9\ub7c9 \uc2a4\ud14c\ub85c\uc774\ub4dc \ud544\uc694 \uac00\ub2a5"], "ix":[]},
-    "Tremelimumab":{"alias":"\ud2b8\ub808\uba5c\ub9ac\ubb34\ub9d9(CTLA-4)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751\u2191"], "warn":["\uac04\ub3c5\uc131 \uc8fc\uc758"], "ix":[]},
-    "Cemiplimab":{"alias":"\uc138\ubbf8\ud50c\ub9ac\ub9d9(PD-1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
-    "Dostarlimab":{"alias":"\ub3c4\uc2a4\ud0c0\ub97c\ub9ac\ub9d9(PD-1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["MSI-H/\uc11c\ub85c\ud45c\uc9c0 \ud655\uc778"], "ix":[]},
-    "Ado-trastuzumab emtansine (T-DM1)":{"alias":"T-DM1(\uce74\ub4dc\uc2e4\ub77c)", "aes":["\ud608\uc18c\ud310\uac10\uc18c", "\uac04\ub3c5\uc131"], "warn":["\uc2ec\uae30\ub2a5/\uac04\uae30\ub2a5"], "ix":[]},
-    "Trastuzumab deruxtecan (T-DXd)":{"alias":"T-DXd", "aes":["\uac04\uc9c8\uc131\ud3d0\uc9c8\ud658(ILD)", "\uc624\uc2ec"], "warn":["\ud638\ud761\uace4\ub780\uc2dc \uc989\uc2dc \uc911\ub2e8"], "ix":[]},
-    "Lapatinib":{"alias":"\ub77c\ud30c\ud2f0\ub2d9(HER2 TKI)", "aes":["\uc124\uc0ac", "\ubc1c\uc9c4"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
-    "Tucatinib":{"alias":"\ud22c\uce74\ud2f0\ub2d9(HER2 TKI)", "aes":["\uac04\uc218\uce58\u2191", "\uc124\uc0ac"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
-    "Dabrafenib":{"alias":"\ub2e4\ube0c\ub77c\ud398\ub2d9(BRAF)", "aes":["\ubc1c\uc5f4", "\ud53c\ubd80\ubc1c\uc9c4"], "warn":["\ubcd1\uc6a9 \ud2b8\ub77c\uba54\ud2f0\ub2d9"], "ix":[]},
-    "Trametinib":{"alias":"\ud2b8\ub77c\uba54\ud2f0\ub2d9(MEK)", "aes":["\uc2ec\uadfc\uae30\ub2a5\uc800\ud558", "\ud53c\ubd80\ubc1c\uc9c4"], "warn":["\uc2ec\ucd08\uc74c\ud30c"], "ix":[]},
-    "Encorafenib":{"alias":"\uc5d4\ucf54\ub77c\ud398\ub2d9(BRAF)", "aes":["\ud53c\ubd80\ub3c5\uc131", "\uad00\uc808\ud1b5"], "warn":[], "ix":[]},
-    "Binimetinib":{"alias":"\ube44\ub2c8\uba54\ud2f0\ub2d9(MEK)", "aes":["\ub9dd\ub9c9\uc7a5\uc561\uc131", "CK \uc0c1\uc2b9"], "warn":[], "ix":[]},
-    "Sotorasib":{"alias":"\uc18c\ud1a0\ub77c\uc2ed(KRAS G12C)", "aes":["\uac04\uc218\uce58\u2191", "\uc124\uc0ac"], "warn":["CYP \uc0c1\ud638\uc791\uc6a9"], "ix":[]},
-    "Adagrasib":{"alias":"\uc544\ub2e4\uac00\ub77c\uc2ed(KRAS G12C)", "aes":["\uad6c\uc5ed/\uc124\uc0ac", "QT \uc5f0\uc7a5"], "warn":[], "ix":[]},
-    "Selpercatinib":{"alias":"\uc140\ud37c\uce74\ud2f0\ub2d9(RET)", "aes":["\uace0\ud608\uc555", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
-    "Pralsetinib":{"alias":"\ud504\ub784\uc138\ud2f0\ub2d9(RET)", "aes":["\uac04\uc218\uce58\u2191", "\uace0\ud608\uc555"], "warn":[], "ix":[]},
-    "Crizotinib":{"alias":"\ud06c\ub9ac\uc870\ud2f0\ub2d9(ALK/ROS1)", "aes":["\uc2dc\uc57c\uc7a5\uc560", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
-    "Lorlatinib":{"alias":"\ub864\ub77c\ud2f0\ub2d9(ALK)", "aes":["\uc9c0\uc9c8\uc774\uc0c1", "CNS \uc99d\uc0c1"], "warn":["\uc9c0\uc9c8\ubaa8\ub2c8\ud130"], "ix":[]},
-    "Capmatinib":{"alias":"\ucea1\ub9c8\ud2f0\ub2d9(MET)", "aes":["\uac04\uc218\uce58\u2191", "\ub9d0\ucd08\ubd80\uc885"], "warn":[], "ix":[]},
-    "Tepotinib":{"alias":"\ud14c\ud3ec\ud2f0\ub2d9(MET)", "aes":["\ubd80\uc885", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
-    "Larotrectinib":{"alias":"\ub77c\ub85c\ud2b8\ub809\ud2f0\ub2d9(NTRK)", "aes":["\ud53c\ub85c", "\uc5b4\uc9c0\ub7fc"], "warn":[], "ix":[]},
-    "Entrectinib":{"alias":"\uc5d4\ud2b8\ub809\ud2f0\ub2d9(NTRK/ROS1)", "aes":["\uc5b4\uc9c0\ub7fc", "\uccb4\uc911\uc99d\uac00"], "warn":[], "ix":[]},
-    "Axitinib":{"alias":"\uc545\uc2dc\ud2f0\ub2d9(TKI)", "aes":["\uace0\ud608\uc555", "\uc124\uc0ac"], "warn":["\ud608\uc555\ubaa8\ub2c8\ud130"], "ix":[]},
-    "Cabozantinib":{"alias":"\uce74\ubcf4\uc794\ud2f0\ub2d9(TKI)", "aes":["\uc190\ubc1c\uc99d\ud6c4\uad70", "\uc124\uc0ac"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
-    "Everolimus":{"alias":"\uc5d0\ubca0\ub85c\ub9ac\ubb34\uc2a4(mTOR)", "aes":["\uad6c\ub0b4\uc5fc", "\uace0\ud608\ub2f9"], "warn":["\ud608\ub2f9/\uc9c0\uc9c8"], "ix":[]},
-    "Ramucirumab":{"alias":"\ub77c\ubb34\uc2dc\ub8e8\ub9d9(anti-VEGFR2)", "aes":["\uace0\ud608\uc555", "\ucd9c\ud608"], "warn":[], "ix":[]},
-    "Niraparib":{"alias":"\ub2c8\ub77c\ud30c\ub9bd(PARP)", "aes":["\ud608\uc18c\ud310\uac10\uc18c", "\ud53c\ub85c"], "warn":["\ud608\uad6c\uac10\uc18c \ubaa8\ub2c8\ud130"], "ix":[]},
-    "Rucaparib":{"alias":"\ub8e8\uce74\ud30c\ub9bd(PARP)", "aes":["\uac04\uc218\uce58\u2191", "\ud53c\ub85c"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
-    "Talazoparib":{"alias":"\ud0c8\ub77c\uc870\ud30c\ub9bd(PARP)", "aes":["\ube48\ud608", "\ud53c\ub85c"], "warn":["\ud608\uad6c\uac10\uc18c \ubaa8\ub2c8\ud130"], "ix":[]},
+    "Avelumab":{"alias":"아벨루맙(PD-L1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
+    "Durvalumab":{"alias":"더발루맙(PD-L1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
+    "Ipilimumab":{"alias":"이필리무맙(CTLA-4)", "aes":["면역관련 이상반응↑"], "warn":["고용량 스테로이드 필요 가능"], "ix":[]},
+    "Tremelimumab":{"alias":"트렘엘리무맙(CTLA-4)", "aes":["면역관련 이상반응↑"], "warn":["간독성 주의"], "ix":[]},
+    "Cemiplimab":{"alias":"세미플리맙(PD-1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
+    "Dostarlimab":{"alias":"도스타를리맙(PD-1)", "aes":["면역관련 이상반응"], "warn":["MSI-H/서로표지 확인"], "ix":[]},
+    "Ado-trastuzumab emtansine (T-DM1)":{"alias":"T-DM1(카드실라)", "aes":["혈소판감소", "간독성"], "warn":["심기능/간기능"], "ix":[]},
+    "Trastuzumab deruxtecan (T-DXd)":{"alias":"T-DXd", "aes":["간질성폐질환(ILD)", "오심"], "warn":["호흡곤란시 즉시 중단"], "ix":[]},
+    "Lapatinib":{"alias":"라파티닙(HER2 TKI)", "aes":["설사", "발진"], "warn":["간기능"], "ix":[]},
+    "Tucatinib":{"alias":"투카티닙(HER2 TKI)", "aes":["간수치↑", "설사"], "warn":["간기능"], "ix":[]},
+    "Dabrafenib":{"alias":"다브라페닙(BRAF)", "aes":["발열", "피부발진"], "warn":["병용 트라메티닙"], "ix":[]},
+    "Trametinib":{"alias":"트라메티닙(MEK)", "aes":["심기능저하", "피부발진"], "warn":["심초음파"], "ix":[]},
+    "Encorafenib":{"alias":"엔코라페닙(BRAF)", "aes":["피부독성", "관절통"], "warn":[], "ix":[]},
+    "Binimetinib":{"alias":"비니메티닙(MEK)", "aes":["망막장액성", "CK 상승"], "warn":[], "ix":[]},
+    "Sotorasib":{"alias":"소토라십(KRAS G12C)", "aes":["간수치↑", "설사"], "warn":["CYP 상호작용"], "ix":[]},
+    "Adagrasib":{"alias":"아다가라십(KRAS G12C)", "aes":["구역/설사", "QT 연장"], "warn":[], "ix":[]},
+    "Selpercatinib":{"alias":"셀퍼카티닙(RET)", "aes":["고혈압", "간수치↑"], "warn":[], "ix":[]},
+    "Pralsetinib":{"alias":"프랄세티닙(RET)", "aes":["간수치↑", "고혈압"], "warn":[], "ix":[]},
+    "Crizotinib":{"alias":"크리조티닙(ALK/ROS1)", "aes":["시야장애", "간수치↑"], "warn":[], "ix":[]},
+    "Lorlatinib":{"alias":"롤라티닙(ALK)", "aes":["지질이상", "CNS 증상"], "warn":["지질모니터"], "ix":[]},
+    "Capmatinib":{"alias":"캡마티닙(MET)", "aes":["간수치↑", "말초부종"], "warn":[], "ix":[]},
+    "Tepotinib":{"alias":"테포티닙(MET)", "aes":["부종", "간수치↑"], "warn":[], "ix":[]},
+    "Larotrectinib":{"alias":"라로트렉티닙(NTRK)", "aes":["피로", "어지럼"], "warn":[], "ix":[]},
+    "Entrectinib":{"alias":"엔트렉티닙(NTRK/ROS1)", "aes":["어지럼", "체중증가"], "warn":[], "ix":[]},
+    "Axitinib":{"alias":"악시티닙(TKI)", "aes":["고혈압", "설사"], "warn":["혈압모니터"], "ix":[]},
+    "Cabozantinib":{"alias":"카보잔티닙(TKI)", "aes":["손발증후군", "설사"], "warn":["간기능"], "ix":[]},
+    "Everolimus":{"alias":"에베롤리무스(mTOR)", "aes":["구내염", "고혈당"], "warn":["혈당/지질"], "ix":[]},
+    "Ramucirumab":{"alias":"라무시루맙(anti-VEGFR2)", "aes":["고혈압", "출혈"], "warn":[], "ix":[]},
+    "Niraparib":{"alias":"니라파립(PARP)", "aes":["혈소판감소", "피로"], "warn":["혈구감소 모니터"], "ix":[]},
+    "Rucaparib":{"alias":"루카파립(PARP)", "aes":["간수치↑", "피로"], "warn":["간기능"], "ix":[]},
+    "Talazoparib":{"alias":"탈라조파립(PARP)", "aes":["빈혈", "피로"], "warn":["혈구감소 모니터"], "ix":[]},
 }
 
 ABX_GUIDE = {
@@ -205,7 +232,7 @@ PED_INFECT = {
     "RSV(세포융합바이러스)": {"핵심":"기침, 쌕쌕거림, 발열","진단":"항원검사 또는 PCR","특징":"모세기관지염 흔함, 겨울철 유행"},
     "Adenovirus(아데노바이러스)": {"핵심":"고열, 결막염, 설사","진단":"PCR","특징":"장염 + 눈충혈 동반 많음"},
     "Rotavirus(로타바이러스)": {"핵심":"구토, 물설사","진단":"항원검사","특징":"탈수 위험 가장 큼"},
-    "Parainfluenza(": {"핵심":"크룹, 쉰목소리","진단":"PCR","특징":"개짖는 기침 특징적"},
+    "Parainfluenza (파라인플루엔자)": {"핵심":"크룹, 쉰목소리","진단":"PCR","특징":"개짖는 기침 특징적"},
     "HFMD (수족구병)": {"핵심":"입안 궤양, 손발 수포","진단":"임상진단","특징":"전염성 매우 강함"},
     "Influenza (독감)": {"핵심":"고열, 근육통","진단":"신속검사 또는 PCR","특징":"해열제 효과 적음"},
     "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"아직도 드물게 유행"}
@@ -231,7 +258,7 @@ CANCER_SPECIFIC = {
     "폐암(Lung cancer)": [("CEA","CEA","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1),("NSE","Neuron-specific enolase","ng/mL",1), "Pembrolizumab", "Nivolumab"],
     "유방암(Breast cancer)": [("CA15-3","CA15-3","U/mL",1),("CEA","CEA","ng/mL",1),("HER2","HER2","IHC/FISH",0),("ER/PR","ER/PR","%",0)],
     "위암(Gastric cancer)": [("CEA","CEA","ng/mL",1),("CA72-4","CA72-4","U/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
-    "대장암(Colorectal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
+    "대장암(Cololoractal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
     "간암(HCC)": [("AFP","AFP","ng/mL",1),("PIVKA-II","PIVKA-II(DCP)","mAU/mL",0)],
     "췌장암(Pancreatic cancer)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
     "담도암(Cholangiocarcinoma)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
@@ -261,7 +288,7 @@ CANCER_SPECIFIC = {
 
 # ===== Regimen shorthand (labels) =====
 REGIMENS = {
-    "FOLFOX": {"설명": "5-FU + Leucovorin + Oxaliplatin (대장암/위암 등)",
+    "FOLFOX": {"설명": "5-FU + Leucovorin + Oxaliplatin (대장암/위암 등)"},
     "AC": {"설명": "Doxorubicin + Cyclophosphamide (유방암)"},
     "AC-T": {"설명": "AC 후 Paclitaxel/Docetaxel (유방암 표준)"},
     "TCHP": {"설명": "Docetaxel + Carboplatin + Trastuzumab + Pertuzumab (HER2 유방암)"},
@@ -275,10 +302,10 @@ REGIMENS = {
     "GP": {"설명": "Gemcitabine + Cisplatin (비인두암)"},
     "PC": {"설명": "Pemetrexed + Cisplatin (비소세포폐암)"},
     "CARBO-TAXOL": {"설명": "Carboplatin + Paclitaxel (폐암/난소암 등)"},
-    "GEMNAB": {"설명": "Gemcitabine + nab-Paclitaxel (췌장암)"}},
+    "GEMNAB": {"설명": "Gemcitabine + nab-Paclitaxel (췌장암)"},
     "FOLFIRI": {"설명": "5-FU + Leucovorin + Irinotecan (대장암)"},
     "FOLFIRINOX": {"설명": "5-FU + Leucovorin + Irinotecan + Oxaliplatin (췌장암)"},
-    "CAPOX": {"설명": "Capecitabine + Oxaliplatin (대장암/위암)"},
+    "CAPOX": {"설명": "Capecitabine + Oxaliplatin (대장암/위암)"}
 }
 
 # ===== Helpers =====
@@ -314,47 +341,47 @@ def _fmt(name, val):
         v = float(val)
     except Exception:
         return str(val)
-    if name == "CRP":
+    if name == LBL_CRP:
         return f"{v:.2f}"
-    if name in ("WBC(백혈구)","ANC(호중구,면연력)","AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","BNP","Glucose"):
+    if name in (LBL_WBC, LBL_ANC, LBL_AST, LBL_ALT, LBL_LDH, LBL_BNP, LBL_Glu):
         return f"{int(v)}" if v.is_integer() else f"{v:.1f}"
     return f"{v:.1f}"
 
 def interpret_labs(l, extras):
     out=[]
     def add(s): out.append("- " + s)
-    if entered(l.get("WBC")):
-        v=l["WBC"]; add(f"WBC {_fmt('WBC', v)}: " + ("낮음 → 감염 위험↑" if v<4 else "높음 → 감염/염증 가능" if v>10 else "정상"))
-    if entered(l.get("Hb")):
-        v=l["Hb"]; add(f"Hb {_fmt('Hb', v)}: " + ("낮음 → 빈혈" if v<12 else "정상"))
-    if entered(l.get("PLT")):
-        v=l["PLT"]; add(f"혈소판 {_fmt('PLT', v)}: " + ("낮음 → 출혈 위험" if v<150 else "정상"))
-    if entered(l.get("ANC")):
-        v=l["ANC"]; add(f"ANC {_fmt('ANC', v)}: " + ("중증 감소(<500)" if v<500 else "감소(<1500)" if v<1500 else "정상"))
-    if entered(l.get("Albumin")):
-        v=l["Albumin"]; add(f"Albumin {_fmt('Albumin', v)}: " + ("낮음 → 영양/염증/간질환 가능" if v<3.5 else "정상"))
-    if entered(l.get("Glucose")):
-        v=l["Glucose"]; add(f"Glucose {_fmt('Glucose', v)}: " + ("고혈당(≥200)" if v>=200 else "저혈당(<70)" if v<70 else "정상"))
-    if entered(l.get("CRP")):
-        v=l["CRP"]; add(f"CRP {_fmt('CRP', v)}: " + ("상승 → 염증/감염 의심" if v>0.5 else "정상"))
-    if entered(l.get("BUN")) and entered(l.get("Cr")) and l["Cr"]>0:
-        ratio=l["BUN"]/l["Cr"]
+    if entered(l.get(LBL_WBC)):
+        v=l[LBL_WBC]; add(f"{LBL_WBC} {_fmt(LBL_WBC, v)}: " + ("낮음 → 감염 위험↑" if v<4 else "높음 → 감염/염증 가능" if v>10 else "정상"))
+    if entered(l.get(LBL_Hb)):
+        v=l[LBL_Hb]; add(f"{LBL_Hb} {_fmt(LBL_Hb, v)}: " + ("낮음 → 빈혈" if v<12 else "정상"))
+    if entered(l.get(LBL_PLT)):
+        v=l[LBL_PLT]; add(f"{LBL_PLT} {_fmt(LBL_PLT, v)}: " + ("낮음 → 출혈 위험" if v<150 else "정상"))
+    if entered(l.get(LBL_ANC)):
+        v=l[LBL_ANC]; add(f"{LBL_ANC} {_fmt(LBL_ANC, v)}: " + ("중증 감소(<500)" if v<500 else "감소(<1500)" if v<1500 else "정상"))
+    if entered(l.get(LBL_Alb)):
+        v=l[LBL_Alb]; add(f"{LBL_Alb} {_fmt(LBL_Alb, v)}: " + ("낮음 → 영양/염증/간질환 가능" if v<3.5 else "정상"))
+    if entered(l.get(LBL_Glu)):
+        v=l[LBL_Glu]; add(f"{LBL_Glu} {_fmt(LBL_Glu, v)}: " + ("고혈당(≥200)" if v>=200 else "저혈당(<70)" if v<70 else "정상"))
+    if entered(l.get(LBL_CRP)):
+        v=l[LBL_CRP]; add(f"{LBL_CRP} {_fmt(LBL_CRP, v)}: " + ("상승 → 염증/감염 의심" if v>0.5 else "정상"))
+    if entered(l.get(LBL_BUN)) and entered(l.get(LBL_Cr)) and l[LBL_Cr]>0:
+        ratio=l[LBL_BUN]/l[LBL_Cr]
         if ratio>20: add(f"BUN/Cr {ratio:.1f}: 탈수 의심")
         elif ratio<10: add(f"BUN/Cr {ratio:.1f}: 간질환/영양 고려")
     if extras.get("diuretic_amt", 0) and extras["diuretic_amt"]>0:
-        if entered(l.get("Na")) and l["Na"]<135: add("🧂 이뇨제 복용 중 저나트륨 → 어지럼/탈수 주의, 의사와 상의")
-        if entered(l.get("K")) and l["K"]<3.5: add("🥔 이뇨제 복용 중 저칼륨 → 심전도/근력저하 주의, 칼륨 보충 식이 고려")
-        if entered(l.get("Ca")) and l["Ca"]<8.5: add("🦴 이뇨제 복용 중 저칼슘 → 손저림/경련 주의")
+        if entered(l.get(LBL_Na)) and l[LBL_Na]<135: add("🧂 이뇨제 복용 중 저나트륨 → 어지럼/탈수 주의, 의사와 상의")
+        if entered(l.get(LBL_K)) and l[LBL_K]<3.5: add("🥔 이뇨제 복용 중 저칼륨 → 심전도/근력저하 주의, 칼륨 보충 식이 고려")
+        if entered(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: add("🦴 이뇨제 복용 중 저칼슘 → 손저림/경련 주의")
     return out
 
 def food_suggestions(l):
     foods=[]
-    if entered(l.get("Albumin")) and l["Albumin"]<3.5: foods.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
-    if entered(l.get("K")) and l["K"]<3.5: foods.append("칼륨 낮음 → " + ", ".join(FOODS["K_low"]))
-    if entered(l.get("Hb")) and l["Hb"]<12: foods.append("Hb 낮음 → " + ", ".join(FOODS["Hb_low"]))
-    if entered(l.get("Na")) and l["Na"]<135: foods.append("나트륨 낮음 → " + ", ".join(FOODS["Na_low"]))
-    if entered(l.get("Ca")) and l["Ca"]<8.5: foods.append("칼슘 낮음 → " + ", ".join(FOODS["Ca_low"]))
-    if entered(l.get("ANC")) and l["ANC"]<500:
+    if entered(l.get(LBL_Alb)) and l[LBL_Alb]<3.5: foods.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
+    if entered(l.get(LBL_K)) and l[LBL_K]<3.5: foods.append("칼륨 낮음 → " + ", ".join(FOODS["K_low"]))
+    if entered(l.get(LBL_Hb)) and l[LBL_Hb]<12: foods.append("Hb 낮음 → " + ", ".join(FOODS["Hb_low"]))
+    if entered(l.get(LBL_Na)) and l[LBL_Na]<135: foods.append("나트륨 낮음 → " + ", ".join(FOODS["Na_low"]))
+    if entered(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: foods.append("칼슘 낮음 → " + ", ".join(FOODS["Ca_low"]))
+    if entered(l.get(LBL_ANC)) and l[LBL_ANC]<500:
         foods.append("🧼 호중구 감소: 생채소 금지, 익혀 섭취, 2시간 지난 음식 금지, 껍질 과일은 의사 상의.")
     foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return foods
@@ -450,7 +477,7 @@ if mode == "일반/암":
     elif group == "고형암":
         cancer = st.selectbox("고형암 종류", [
             "폐암(Lung cancer)","유방암(Breast cancer)","위암(Gastric cancer)",
-            "대장암(Colorectal cancer)","간암(HCC)","췌장암(Pancreatic cancer)",
+            "대장암(Cololoractal cancer)","간암(HCC)","췌장암(Pancreatic cancer)",
             "담도암(Cholangiocarcinoma)","자궁내막암(Endometrial cancer)",
             "구강암/후두암","피부암(흑색종)","육종(Sarcoma)","신장암(RCC)",
             "갑상선암","난소암","자궁경부암","전립선암","뇌종양(Glioma)","식도암","방광암"
@@ -472,19 +499,18 @@ elif mode == "소아(일상/호흡기)":
 else:
     st.markdown("### 🧫 소아·영유아 감염질환")
     infect_sel = st.selectbox("질환 선택", list(PED_INFECT.keys()))
-    info = PED_INFECT.get(infect_sel, {})
     if HAS_PD:
         _df = pd.DataFrame([{
-            "핵심": info.get("핵심",""),
-            "진단": info.get("진단",""),
-            "특징": info.get("특징",""),
+            "핵심": PED_INFECT[infect_sel].get("핵심",""),
+            "진단": PED_INFECT[infect_sel].get("진단",""),
+            "특징": PED_INFECT[infect_sel].get("특징",""),
         }], index=[infect_sel])
         st.table(_df)
     else:
         st.markdown(f"**{infect_sel}**")
-        st.write(f"- 핵심: {info.get('핵심','')}")
-        st.write(f"- 진단: {info.get('진단','')}")
-        st.write(f"- 특징: {info.get('특징','')}")
+        st.write(f"- 핵심: {PED_INFECT[infect_sel].get('핵심','')}")
+        st.write(f"- 진단: {PED_INFECT[infect_sel].get('진단','')}")
+        st.write(f"- 특징: {PED_INFECT[infect_sel].get('특징','')}")
 
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
@@ -511,7 +537,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
                            "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab", "Durvalumab", "Crizotinib", "Lorlatinib", "Selpercatinib", "Pralsetinib", "Capmatinib", "Tepotinib", "Sotorasib", "Adagrasib", "Larotrectinib", "Entrectinib"],
         "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab", "Ado-trastuzumab emtansine (T-DM1)", "Trastuzumab deruxtecan (T-DXd)", "Lapatinib", "Tucatinib"],
         "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel", "Ramucirumab", "Trastuzumab", "Pembrolizumab"],
-        "대장암(Colorectal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab", "Regorafenib", "Ramucirumab", "Pembrolizumab"],
+        "대장암(Cololoractal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab", "Regorafenib", "Ramucirumab", "Pembrolizumab"],
         "간암(HCC)": ["Doxorubicin","Sorafenib","Lenvatinib","Atezolizumab","Bevacizumab", "Durvalumab", "Tremelimumab", "Ramucirumab"],
         "췌장암(Pancreatic cancer)": ["Gemcitabine","Oxaliplatin","Irinotecan","5-FU"],
         "담도암(Cholangiocarcinoma)": ["Gemcitabine","Cisplatin","Bevacizumab"],
@@ -602,9 +628,9 @@ vals = {}
 def render_inputs_vertical():
     st.markdown("**기본 패널**")
     for name in ORDER:
-        if name == "CRP":
+        if name == LBL_CRP:
             vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
-        elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
+        elif name in (LBL_WBC, LBL_ANC, LBL_AST, LBL_ALT, LBL_LDH, LBL_BNP, LBL_Glu):
             vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
         else:
             vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
@@ -615,17 +641,17 @@ def render_inputs_table():
     half = (len(ORDER)+1)//2
     with left:
         for name in ORDER[:half]:
-            if name == "CRP":
+            if name == LBL_CRP:
                 vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
-            elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
+            elif name in (LBL_WBC, LBL_ANC, LBL_AST, LBL_ALT, LBL_LDH, LBL_BNP, LBL_Glu):
                 vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
             else:
                 vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
     with right:
         for name in ORDER[half:]:
-            if name == "CRP":
+            if name == LBL_CRP:
                 vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
-            elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
+            elif name in (LBL_WBC, LBL_ANC, LBL_AST, LBL_ALT, LBL_LDH, LBL_BNP, LBL_Glu):
                 vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
             else:
                 vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
@@ -653,10 +679,15 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         st.divider()
         st.header("3️⃣ 암별 디테일 수치")
         st.caption("해석은 주치의 판단을 따르며, 값 기록/공유를 돕기 위한 입력 영역입니다.")
-        for key, label, unit, decs in items:
-            ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
-            val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
-            extra_vals[key] = val
+        for it in items:
+            if isinstance(it, tuple):
+                key, label, unit, decs = it
+                ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
+                val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
+                extra_vals[key] = val
+            else:
+                # drug label passthrough in cancer panel (ignored here; separate drug UI exists)
+                pass
 elif mode == "소아(일상/호흡기)":
     st.divider()
     st.header("3️⃣ 소아 생활 가이드")
@@ -742,7 +773,7 @@ if run:
         for k in ORDER:
             v = vals.get(k)
             if entered(v):
-                if k == "CRP": buf.append(f"- {k}: {float(v):.2f}\n")
+                if k == LBL_CRP: buf.append(f"- {k}: {float(v):.2f}\n")
                 else: buf.append(f"- {k}: {_fmt(k, v)}\n")
         if extra_vals:
             buf.append("\n## 암별 디테일 수치\n")
@@ -757,7 +788,7 @@ if run:
             try: return x is not None and float(x)!=0
             except: return False
         if _ent(age_m): buf.append(f"- 나이(개월): {int(age_m)}\n")
-        if _ent(temp_c): buf.append(f"- 체온: {float(temp_c):.1f}℃\n")
+        if _ent(temp_c): buf.append(f"- 체온: {float(temp_c):1.1f}℃\n")
         if _ent(rr): buf.append(f"- 호흡수: {int(rr)}/분\n")
         if _ent(spo2): buf.append(f"- SpO₂: {int(spo2)}%\n")
         if _ent(urine_24h): buf.append(f"- 24시간 소변 횟수: {int(urine_24h)}\n")
@@ -860,7 +891,8 @@ else:
         sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
         rows = st.session_state.records.get(sel, [])
         if rows:
-            data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC","Hb","PLT","CRP","ANC"]}} for r in rows ]
+            # Build dataframe with labeled columns
+            data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in [LBL_WBC, LBL_Hb, LBL_PLT, LBL_CRP, LBL_ANC]}} for r in rows ]
             import pandas as pd  # local import for safety
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
@@ -872,4 +904,5 @@ else:
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
+
 
