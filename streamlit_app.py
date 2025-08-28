@@ -489,6 +489,12 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
     
+# 안전 가드: 암 그룹 미선택 시에도 참조 오류 방지
+try:
+    drug_list
+except NameError:
+    drug_list = []
+
 drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
