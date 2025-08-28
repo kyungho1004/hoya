@@ -489,8 +489,8 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
     
-drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
-drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
+drug_search = st.text_input("🔍 항암제 검색", key="drug_search") or ""
+drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in str(ANTICANCER.get(d,{}).get("alias","")).lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
 for d in selected_drugs:
         alias = ANTICANCER.get(d,{}).get("alias","")
@@ -511,8 +511,8 @@ for d in selected_drugs:
 st.markdown("### 🧪 항생제 선택 및 입력")
 extras["abx"] = {}
 
-abx_search = st.text_input("🔍 항생제 검색", key="abx_search")
-abx_choices = [a for a in ABX_GUIDE.keys() if not abx_search or abx_search.lower() in a.lower() or any(abx_search.lower() in tip.lower() for tip in ABX_GUIDE[a])]
+abx_search = st.text_input("🔍 항생제 검색", key="abx_search") or ""
+abx_choices = [a for a in ABX_GUIDE.keys() if not abx_search or abx_search.lower() in a.lower() or any(abx_search.lower() in str(tip).lower() for tip in ABX_GUIDE[a])]
 selected_abx = st.multiselect("항생제 계열 선택", abx_choices, default=[])
 for abx in selected_abx:
     extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
