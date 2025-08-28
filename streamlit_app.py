@@ -904,6 +904,115 @@ else:
     else:
         st.info("아직 저장된 기록이 없습니다.")
 
+
+# ===== Compact Drug Encyclopedia (Search + Paged) =====
+st.markdown("---")
+st.header("📚 약물 사전 (스크롤 최소화 뷰어)")
+
+with st.expander("열기 / 닫기", expanded=False):
+    st.caption("빠르게 찾아보고 싶은 약을 검색하세요. 결과는 페이지로 나눠서 보여줍니다.")
+    view_tab1, view_tab2 = st.tabs(["항암제 사전", "항생제 사전"])
+
+    # ---- 항암제 사전 ----
+    with view_tab1:
+        # Build searchable rows from ANTICANCER
+        ac_rows = []
+        for k, v in ANTICANCER.items():
+            alias = v.get("alias","")
+            aes = ", ".join(v.get("aes", []))
+            # 간단 태그 추정
+            tags = []
+            key = k.lower()
+            if any(x in key for x in ["mab","nib","pembro","nivo","tuzu","zumab"]):
+                tags.append("표적/면역")
+            if k in ["Imatinib","Dasatinib","Nilotinib","Sunitinib","Pazopanib","Regorafenib","Lenvatinib","Sorafenib"]:
+                tags.append("TKI")
+            if k in ["Pembrolizumab","Nivolumab","Trastuzumab","Bevacizumab"]:
+                tags.append("면역/항체")
+            ac_rows.append({
+                "약물": k, "한글명": alias, "부작용": aes, "태그": ", ".join(tags)
+            })
+
+        if HAS_PD:
+            import pandas as pd
+            ac_df = pd.DataFrame(ac_rows)
+        else:
+            ac_df = None
+
+        q = st.text_input("🔎 약물명/한글명/부작용/태그 검색", key="drug_search_ac", placeholder="예: MTX, 간독성, 면역, TKI ...")
+        page_size = st.selectbox("페이지 크기", [5, 10, 15, 20], index=1, key="ac_page_size")
+        if HAS_PD and ac_df is not None:
+            fdf = ac_df.copy()
+            if q:
+                ql = q.strip().lower()
+                mask = (
+                    fdf["약물"].str.lower().str.contains(ql) |
+                    fdf["한글명"].str.lower().str.contains(ql) |
+                    fdf["부작용"].str.lower().str.contains(ql) |
+                    fdf["태그"].str.lower().str.contains(ql)
+                )
+                fdf = fdf[mask]
+            total = len(fdf)
+            st.caption(f"검색 결과: {total}건")
+            if total == 0:
+                st.info("검색 결과가 없습니다.")
+            else:
+                # pagination
+                max_page = (total - 1) // page_size + 1
+                cur_page = st.number_input("페이지", min_value=1, max_value=max_page, value=1, step=1, key="ac_page")
+                start = (cur_page - 1) * page_size
+                end = start + page_size
+                show_df = fdf.iloc[start:end]
+                # Render compact cards
+                for _, row in show_df.iterrows():
+                    with st.container(border=True):
+                        st.markdown(f"**{row['약물']}** · {row['한글명']}")
+                        st.caption(f"태그: {row['태그'] if row['태그'] else '—'}")
+                        st.write("부작용: " + (row["부작용"] if row["부작용"] else "—"))
+        else:
+            st.info("pandas 설치 시 검색/페이지 기능이 활성화됩니다.")
+
+    # ---- 항생제 사전 ----
+    with view_tab2:
+        abx_rows = []
+        for cat, tips in ABX_GUIDE.items():
+            abx_rows.append({
+                "계열": cat, "주의사항": ", ".join(tips)
+            })
+        if HAS_PD:
+            import pandas as pd
+            abx_df = pd.DataFrame(abx_rows)
+        else:
+            abx_df = None
+
+        q2 = st.text_input("🔎 계열/주의사항 검색", key="drug_search_abx", placeholder="예: QT, 광과민, 와파린 ...")
+        page_size2 = st.selectbox("페이지 크기", [5, 10, 15, 20], index=1, key="abx_page_size")
+        if HAS_PD and abx_df is not None:
+            fdf2 = abx_df.copy()
+            if q2:
+                ql2 = q2.strip().lower()
+                mask2 = (
+                    fdf2["계열"].str.lower().str.contains(ql2) |
+                    fdf2["주의사항"].str.lower().str.contains(ql2)
+                )
+                fdf2 = fdf2[mask2]
+            total2 = len(fdf2)
+            st.caption(f"검색 결과: {total2}건")
+            if total2 == 0:
+                st.info("검색 결과가 없습니다.")
+            else:
+                max_page2 = (total2 - 1) // page_size2 + 1
+                cur_page2 = st.number_input("페이지", min_value=1, max_value=max_page2, value=1, step=1, key="abx_page")
+                start2 = (cur_page2 - 1) * page_size2
+                end2 = start2 + page_size2
+                show_df2 = fdf2.iloc[start2:end2]
+                for _, row in show_df2.iterrows():
+                    with st.container(border=True):
+                        st.markdown(f"**{row['계열']}**")
+                        st.write("주의사항: " + (row["주의사항"] if row["주의사항"] else "—"))
+        else:
+            st.info("pandas 설치 시 검색/페이지 기능이 활성화됩니다.")
+
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
