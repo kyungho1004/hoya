@@ -844,66 +844,67 @@ if run:
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                        mime="text/plain")
 
-    if HAS_PDF:
-        def md_to_pdf_bytes(md_text: str) -> bytes:
+    
+    #if HAS_PDF:
+       # def md_to_pdf_bytes(md_text: str) -> bytes:
             # Try to register a Korean font if present
-            font_registered = False
-            font_name = 'NanumGothic'
-            for candidate in ['NanumGothic.ttf', 'NotoSansKR-Regular.otf', 'NanumGothic.otf']:
-                if os.path.exists(candidate):
-                    try:
-                        pdfmetrics.registerFont(TTFont(font_name, candidate))
-                        font_registered = True
-                        # save chosen font path for UI display
-                        try:
-                            import streamlit as st
-                            st.session_state['__pdf_font_used'] = c
-                        except Exception:
-                            pass
-                        break
-                    except Exception:
-                        pass
+           # font_registered = False
+           # font_name = 'NanumGothic'
+            #for candidate in ['NanumGothic.ttf', 'NotoSansKR-Regular.otf', 'NanumGothic.otf']:
+             #   if os.path.exists(candidate):
+              #      try:
+               #         pdfmetrics.registerFont(TTFont(font_name, candidate))
+                #        font_registered = True
+                 #       # save chosen font path for UI display
+                  #      try:
+                   #         import streamlit as st
+                    #        st.session_state['__pdf_font_used'] = c
+                     #   except Exception:
+                      #      pass
+                       # break
+                   # except Exception:
+                    #    pass
 
-            buf_pdf = BytesIO()
-            doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
-                                    topMargin=15*mm, bottomMargin=15*mm)
-            styles = getSampleStyleSheet()
+           # buf_pdf = BytesIO()
+            # doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
+              #                      topMargin=15*mm, bottomMargin=15*mm)
+          #  styles = getSampleStyleSheet()
             # Force styles to use Korean-capable font if available
-            target_font = font_name if font_registered else styles['BodyText'].fontName
-            for s in ['Title','Heading1','Heading2','BodyText']:
-                if s in styles.byName:
-                    styles[s].fontName = target_font
+           # target_font = font_name if font_registered else styles['BodyText'].fontName
+           # for s in ['Title','Heading1','Heading2','BodyText']:
+            #    if s in styles.byName:
+              #      styles[s].fontName = target_font
 
-            story = []
-            for line in md_text.splitlines():
-                line = line.strip()
-                if not line:
-                    story.append(Spacer(1, 4*mm))
-                    continue
-                if line.startswith("# "):
-                    p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
-                elif line.startswith("## "):
-                    p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
-                elif line.startswith("- "):
-                    p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
-                elif line.startswith("> "):
-                    p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
-                else:
-                    p = Paragraph(escape(line), styles['BodyText'])
-                story.append(p)
-            \
+         #   story = []
+          #  for line in md_text.splitlines():
+           #     line = line.strip()
+           #     if not line:
+            #        story.append(Spacer(1, 4*mm))
+             #       continue
+              #  if line.startswith("# "):
+               #     p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
+               # elif line.startswith("## "):
+                #    p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
+               # elif line.startswith("- "):
+               #     p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
+               # elif line.startswith("> "):
+               #     p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
+               # else:
+                #    p = Paragraph(escape(line), styles['BodyText'])
+               # story.append(p)
+           # \
 
             # Debug info: show which font was chosen
-            st.info(f"PDF 생성 시 사용한 폰트: {chosen if chosen else '기본 내장 폰트 (한글 미지원일 수 있음)'}")
-    
-            return buf_pdf.getvalue()
+       #     st.info(f"PDF 생성 시 사용한 폰트: {chosen if chosen else '기본 내장 폰트 (한글 미지원일 수 있음)'}")
+    #
+     #       return buf_pdf.getvalue()
 
-        pdf_bytes = md_to_pdf_bytes(report_md)
-        st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
-                           file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                           mime="application/pdf")
-    else:
-        st.info("PDF 변환 모듈(reportlab)을 찾을 수 없어 .pdf 다운로드를 숨겼습니다. 'pip install reportlab' 후 사용 가능합니다.")
+      #  pdf_bytes = md_to_pdf_bytes(report_md)
+       # st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
+        #                   file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+         #                  mime="application/pdf")
+    #else:
+      #  st.info("PDF 변환 모듈(reportlab)을 찾을 수 없어 .pdf 다운로드를 숨겼습니다. 'pip install reportlab' 후 사용 가능합니다.")#
 
     # Save session record
     if nickname and nickname.strip():
