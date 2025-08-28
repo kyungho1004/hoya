@@ -26,11 +26,11 @@ except Exception:
 from xml.sax.saxutils import escape
 
 # ===== Page config =====
-st.set_page_config(page_title="피수치 가이드 by Hoya (v3.12 통합·폰트고정)", layout="centered")
-st.title("🩸 피수치 가이드  (v3.12 통합 · PDF 폰트 고정판)")
+st.set_page_config(page_title="피수치 가이드 by Hoya (v3.13 · 변화비교/스케줄/계절식/ANC장소)", layout="centered")
+st.title("🩸 피수치 가이드  (v3.13 · 변화비교 · 스케줄표 · 계절 식재료 · ANC 장소별 가이드)")
 st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
-st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블 · PDF는 항상 'fonts/NanumGothic-Regular.ttf' 사용")
+st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교 · 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
 
 # Ensure fonts folder exists
 os.makedirs("fonts", exist_ok=True)
@@ -69,7 +69,7 @@ DISCLAIMER = (
     "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다."
 )
 
-# ===== Drug dictionaries (trimmed to essentials to keep file size reasonable) =====
+# ===== Drug dictionaries (trimmed) =====
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"]},
     "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"]},
@@ -89,7 +89,7 @@ ANTICANCER = {
     "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","고혈당","간수치 상승"]},
     "Rituximab":{"alias":"리툭시맙","aes":["주입반응","감염 위험","HBV 재활성"]},
 
-    # Solid-tumor common
+    # Solid-tumor common (발췌)
     "Paclitaxel":{"alias":"파클리탁셀","aes":["말초신경병증","호중구감소"]},
     "Docetaxel":{"alias":"도세탁셀","aes":["체액저류","호중구감소"]},
     "Doxorubicin":{"alias":"독소루비신","aes":["심독성","탈모","구내염"]},
@@ -125,6 +125,56 @@ FOODS = {
     "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
     "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
 }
+
+# 계절 식재료 + 간단 레시피 링크(예시 링크; 병원/가정 모두 참고용)
+FOODS_SEASONAL = {
+    "봄": ["두릅", "봄동", "주꾸미", "달래", "쑥"],
+    "여름": ["오이", "토마토", "옥수수", "참외", "수박"],
+    "가을": ["버섯", "고등어", "전어", "배", "단호박"],
+    "겨울": ["무", "배추", "굴", "귤", "시금치"],
+}
+RECIPE_LINKS = {
+    "달걀": "https://recipe1.ezmember.co.kr/",
+    "연두부": "https://www.10000recipe.com/",
+    "흰살 생선": "https://www.10000recipe.com/",
+    "닭가슴살": "https://www.10000recipe.com/",
+    "귀리죽": "https://www.10000recipe.com/",
+    "바나나": "https://www.10000recipe.com/",
+    "감자": "https://www.10000recipe.com/",
+    "호박죽": "https://www.10000recipe.com/",
+    "고구마": "https://www.10000recipe.com/",
+    "오렌지": "https://www.10000recipe.com/",
+    "소고기": "https://www.10000recipe.com/",
+    "시금치": "https://www.10000recipe.com/",
+    "두부": "https://www.10000recipe.com/",
+    "달걀 노른자": "https://www.10000recipe.com/",
+    "렌틸콩": "https://www.10000recipe.com/",
+    "전해질 음료": "https://www.10000recipe.com/",
+    "미역국": "https://www.10000recipe.com/",
+    "오트밀죽": "https://www.10000recipe.com/",
+    "삶은 감자": "https://www.10000recipe.com/",
+    "연어 통조림": "https://www.10000recipe.com/",
+    "두릅": "https://www.10000recipe.com/",
+    "봄동": "https://www.10000recipe.com/",
+    "주꾸미": "https://www.10000recipe.com/",
+    "달래": "https://www.10000recipe.com/",
+    "쑥": "https://www.10000recipe.com/",
+    "오이": "https://www.10000recipe.com/",
+    "토마토": "https://www.10000recipe.com/",
+    "옥수수": "https://www.10000recipe.com/",
+    "참외": "https://www.10000recipe.com/",
+    "수박": "https://www.10000recipe.com/",
+    "버섯": "https://www.10000recipe.com/",
+    "고등어": "https://www.10000recipe.com/",
+    "전어": "https://www.10000recipe.com/",
+    "배": "https://www.10000recipe.com/",
+    "단호박": "https://www.10000recipe.com/",
+    "무": "https://www.10000recipe.com/",
+    "배추": "https://www.10000recipe.com/",
+    "굴": "https://www.10000recipe.com/",
+    "귤": "https://www.10000recipe.com/",
+}
+
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
 PED_TOPICS = ["RSV/모세기관지염","영아 중이염","크룹","구토·설사(탈수)","열경련"]
@@ -142,16 +192,6 @@ PED_INFECT = {
     "HFMD (수족구병)": {"핵심":"입안 궤양, 손발 수포","진단":"임상진단","특징":"전염성 매우 강함"},
     "Influenza (독감)": {"핵심":"고열, 근육통","진단":"신속검사 또는 PCR","특징":"해열제 효과 적음"},
     "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"지속적 산발 유행 가능"},
-}
-
-REGIMENS = {
-    "FOLFOX": {"설명": "5-FU + Leucovorin + Oxaliplatin (대장암/위암 등)"},
-    "AC": {"설명": "Doxorubicin + Cyclophosphamide (유방암)"},
-    "AC-T": {"설명": "AC 후 Paclitaxel/Docetaxel (유방암 표준)"},
-    "TCHP": {"설명": "Docetaxel + Carboplatin + Trastuzumab + Pertuzumab (HER2 유방암)"},
-    "XELOX": {"설명": "Capecitabine + Oxaliplatin (=CAPOX)"},
-    "FOLFIRI": {"설명": "5-FU + Leucovorin + Irinotecan (대장암)"},
-    "FOLFIRINOX": {"설명": "5-FU + Leucovorin + Irinotecan + Oxaliplatin (췌장암)"},
 }
 
 # ===== Helpers =====
@@ -220,17 +260,86 @@ def interpret_labs(l, extras):
         if entered(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: add("🦴 이뇨제 복용 중 저칼슘 → 손저림/경련 주의")
     return out
 
-def food_suggestions(l):
+def _arrow(delta):
+    if delta > 0: return "↑"
+    if delta < 0: return "↓"
+    return "→"
+
+def compare_with_previous(nickname, new_labs):
+    """Return list of comparison strings vs previous saved record for this nickname."""
+    rows = st.session_state.records.get(nickname, []) if "records" in st.session_state else []
+    if not rows:
+        return []
+    # previous record = last saved
+    prev = rows[-1].get("labs", {})
+    out = []
+    for k in ORDER:
+        if entered(new_labs.get(k)) and entered(prev.get(k)):
+            try:
+                cur = float(new_labs[k])
+                old = float(prev[k])
+                delta = cur - old
+                sign = _arrow(delta)
+                # format delta
+                if k == LBL_CRP:
+                    dtxt = f"{delta:+.2f}"
+                elif k in (LBL_WBC, LBL_ANC, LBL_AST, LBL_ALT, LBL_LDH, LBL_BNP, LBL_Glu):
+                    dtxt = f"{delta:+.1f}"
+                else:
+                    dtxt = f"{delta:+.1f}"
+                out.append(f"- {k}: {_fmt(k, cur)} ({sign} {dtxt} vs { _fmt(k, old) })")
+            except Exception:
+                pass
+    return out
+
+def seasonal_food_section():
+    # Detect season by month (KST)
+    m = date.today().month
+    if m in (3,4,5): season="봄"
+    elif m in (6,7,8): season="여름"
+    elif m in (9,10,11): season="가을"
+    else: season="겨울"
+    st.markdown(f"#### 🥗 계절 식재료 ({season})")
+    items = FOODS_SEASONAL.get(season, [])
+    if items:
+        st.write("· " + ", ".join(items))
+    st.caption("간단 레시피는 아래 추천 목록의 각 식재료 링크를 눌러 참고하세요.")
+
+def food_suggestions(l, anc_place):
     foods=[]
-    if entered(l.get(LBL_Alb)) and l[LBL_Alb]<3.5: foods.append("알부민 낮음 → " + ", ".join(FOODS["Albumin_low"]))
-    if entered(l.get(LBL_K)) and l[LBL_K]<3.5: foods.append("칼륨 낮음 → " + ", ".join(FOODS["K_low"]))
-    if entered(l.get(LBL_Hb)) and l[LBL_Hb]<12: foods.append("Hb 낮음 → " + ", ".join(FOODS["Hb_low"]))
-    if entered(l.get(LBL_Na)) and l[LBL_Na]<135: foods.append("나트륨 낮음 → " + ", ".join(FOODS["Na_low"]))
-    if entered(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: foods.append("칼슘 낮음 → " + ", ".join(FOODS["Ca_low"]))
+    # 계절 섹션 먼저
+    seasonal_food_section()
+
+    if entered(l.get(LBL_Alb)) and l[LBL_Alb]<3.5: foods.append(("알부민 낮음", FOODS["Albumin_low"]))
+    if entered(l.get(LBL_K)) and l[LBL_K]<3.5: foods.append(("칼륨 낮음", FOODS["K_low"]))
+    if entered(l.get(LBL_Hb)) and l[LBL_Hb]<12: foods.append(("Hb 낮음", FOODS["Hb_low"]))
+    if entered(l.get(LBL_Na)) and l[LBL_Na]<135: foods.append(("나트륨 낮음", FOODS["Na_low"]))
+    if entered(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: foods.append(("칼슘 낮음", FOODS["Ca_low"]))
+
+    # ANC 기반 장소 구분 가이드
     if entered(l.get(LBL_ANC)) and l[LBL_ANC]<500:
-        foods.append("🧼 호중구 감소: 생채소 금지, 익혀 섭취, 2시간 지난 음식 금지, 껍질 과일은 의사 상의.")
-    foods.append("⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
-    return foods
+        if anc_place == "병원":
+            anc_line = "🧼 (병원) 호중구 감소: 멸균/살균 처리식 권장, 외부 음식 반입 제한, 병원 조리식 우선."
+        else:
+            anc_line = "🧼 (가정) 호중구 감소: 생채소 금지, 모든 음식 완전가열(전자레인지 30초+), 조리 후 2시간 경과 음식 금지, 껍질 과일은 의료진과 상의."
+    else:
+        anc_line = None
+
+    # Build markdown bullets with recipe links
+    lines = []
+    for title, lst in foods:
+        linked = []
+        for x in lst:
+            url = RECIPE_LINKS.get(x, "https://www.10000recipe.com/")
+            linked.append(f"[{x}]({url})")
+        lines.append(f"- {title} → " + ", ".join(linked))
+    # add ANC line at the end if exists
+    if anc_line:
+        lines.append("- " + anc_line)
+
+    # Common warning
+    lines.append("- ⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
+    return lines
 
 def summarize_meds(meds: dict):
     out=[]
@@ -255,15 +364,24 @@ def abx_summary(abx_dict):
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
     return lines
 
+# ===== Session stores =====
+if "records" not in st.session_state:
+    st.session_state.records = {}
+if "schedules" not in st.session_state:
+    st.session_state.schedules = {}
+
 # ===== UI 1) Patient / Mode =====
 st.divider()
 st.header("1️⃣ 환자/암·소아 정보")
 
 c1, c2 = st.columns(2)
 with c1:
-    nickname = st.text_input("별명(저장/그래프용)", placeholder="예: 홍길동")
+    nickname = st.text_input("별명(저장/그래프/스케줄용)", placeholder="예: 홍길동")
 with c2:
     test_date = st.date_input("검사 날짜", value=date.today())
+
+# ANC 장소 선택 (병원/가정)
+anc_place = st.radio("현재 식사 장소(ANC 가이드용)", ["가정", "병원"], horizontal=True)
 
 mode = st.selectbox("모드 선택", ["일반/암", "소아(일상/호흡기)", "소아(감염질환)"])
 
@@ -516,6 +634,45 @@ else:
     st.header("3️⃣ 감염질환 요약")
     st.info("표는 위 선택창에서 자동 생성됩니다.")
 
+# ===== NEW: 항암 스케줄표 (별명 기반) =====
+st.divider()
+st.header("📆 항암 스케줄표 (별명별 관리)")
+if nickname and nickname.strip():
+    # init schedule list
+    st.session_state.schedules.setdefault(nickname, [])
+    colA, colB, colC = st.columns([1,1,2])
+    with colA:
+        sch_date = st.date_input("날짜 선택", value=date.today(), key="sch_date")
+    with colB:
+        sch_drug = st.text_input("항암제/치료명", key="sch_drug", placeholder="예: ARA-C, MTX, 외래채혈")
+    with colC:
+        sch_note = st.text_input("비고(용량/주기 등)", key="sch_note", placeholder="예: HDAC Day1, 100mg/m2")
+
+    if st.button("➕ 일정 추가", use_container_width=True):
+        st.session_state.schedules[nickname].append({
+            "date": sch_date.isoformat(),
+            "drug": sch_drug.strip(),
+            "note": sch_note.strip()
+        })
+        st.success("스케줄이 추가되었습니다.")
+
+    rows = st.session_state.schedules.get(nickname, [])
+    if rows:
+        if HAS_PD:
+            df = pd.DataFrame(rows)
+            df = df.sort_values("date")
+            st.table(df)
+            # CSV download
+            csv = df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button("📥 스케줄(.csv) 다운로드", data=csv, file_name=f"{nickname}_schedule.csv", mime="text/csv")
+        else:
+            for r in sorted(rows, key=lambda x: x["date"]):
+                st.write(f"- {r['date']} · {r['drug']} · {r['note']}")
+    else:
+        st.info("일정을 추가해 관리하세요. (별명 기준으로 저장됩니다)")
+else:
+    st.info("별명을 입력하면 스케줄표를 사용할 수 있어요.")
+
 # ===== Run =====
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
@@ -527,16 +684,25 @@ if run:
         lines = interpret_labs(vals, extras)
         for line in lines: st.write(line)
 
+        # NEW: 수치 변화 비교 (이전 기록과)
+        if nickname and "records" in st.session_state and st.session_state.records.get(nickname):
+            st.markdown("### 🔍 수치 변화 비교 (이전 기록 대비)")
+            cmp_lines = compare_with_previous(nickname, {k: vals.get(k) for k in ORDER if entered(vals.get(k))})
+            if cmp_lines:
+                for l in cmp_lines: st.write(l)
+            else:
+                st.info("비교할 이전 기록이 없거나 값이 부족합니다.")
+
         shown = [ (k, v) for k, v in (extra_vals or {}).items() if entered(v) ]
         if shown:
             st.markdown("### 🧬 암별 디테일 수치")
             for k, v in shown:
                 st.write(f"- {k}: {v}")
 
-        fs = food_suggestions(vals)
+        fs = food_suggestions(vals, anc_place)
         if fs:
-            st.markdown("### 🥗 음식 가이드")
-            for f in fs: st.write("- " + f)
+            st.markdown("### 🥗 음식 가이드 (계절/레시피 포함)")
+            for f in fs: st.markdown(f)
     elif mode == "소아(일상/호흡기)":
         st.info("위 위험도 배너를 참고하세요.")
     else:
@@ -595,6 +761,14 @@ if run:
             if entered(v):
                 if k == LBL_CRP: buf.append(f"- {k}: {float(v):.2f}\n")
                 else: buf.append(f"- {k}: {_fmt(k, v)}\n")
+
+        # 변화 비교 요약
+        if nickname and "records" in st.session_state and st.session_state.records.get(nickname):
+            cmp_lines = compare_with_previous(nickname, {k: vals.get(k) for k in ORDER if entered(vals.get(k))})
+            if cmp_lines:
+                buf.append("\n## 수치 변화 비교(이전 대비)\n")
+                for l in cmp_lines: buf.append(l + "\n")
+
         if extra_vals:
             buf.append("\n## 암별 디테일 수치\n")
             for k, v in extra_vals.items():
@@ -602,16 +776,19 @@ if run:
         if meds:
             buf.append("\n## 항암제 요약\n")
             for line in summarize_meds(meds): buf.append(line + "\n")
-        _foods_for_report = food_suggestions(vals)
+
+        _foods_for_report = food_suggestions(vals, anc_place)
         if _foods_for_report:
-            buf.append("\n## 음식 가이드\n")
+            buf.append("\n## 음식 가이드(계절/레시피 포함)\n")
             for f in _foods_for_report:
-                buf.append("- " + f + "\n")
+                # strip markdown links for txt/pdf readability? keep as is
+                buf.append(f + "\n")
 
     if extras.get("abx"):
         buf.append("\n## 항생제\n")
         for l in abx_summary(extras["abx"]): buf.append(l + "\n")
 
+    buf.append(f"\n- ANC 장소: {anc_place}\n")
     buf.append("\n> " + DISCLAIMER + "\n")
     report_md = "".join(buf)
 
@@ -691,8 +868,6 @@ if run:
         st.info("PDF 모듈(reportlab)이 없어 .pdf 버튼이 숨겨졌습니다. (pip install reportlab)")
 
     # Save session record
-    if "records" not in st.session_state:
-        st.session_state.records = {}
     if nickname and nickname.strip():
         rec = {
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
