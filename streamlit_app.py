@@ -891,7 +891,7 @@ if run:
                 else:
                     p = Paragraph(escape(line), styles['BodyText'])
                 story.append(p)
-            \
+            \1
 
             # Debug info: show which font was chosen
             st.info(f"PDF 생성 시 사용한 폰트: {chosen if chosen else '기본 내장 폰트 (한글 미지원일 수 있음)'}")
