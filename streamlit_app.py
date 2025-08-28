@@ -316,7 +316,7 @@ def _fmt(name, val):
         return str(val)
     if name == "CRP":
         return f"{v:.2f}"
-    if name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
+    if name in ("WBC(백혈구)","ANC(호중구,면연력)","AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","BNP","Glucose"):
         return f"{int(v)}" if v.is_integer() else f"{v:.1f}"
     return f"{v:.1f}"
 
