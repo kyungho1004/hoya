@@ -439,7 +439,6 @@ extras = {}
 
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 선택 및 입력")
-
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide",
                 "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF"],
