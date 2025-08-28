@@ -1,3 +1,4 @@
+
 from datetime import datetime, date
 import os
 import streamlit as st
@@ -27,10 +28,10 @@ from xml.sax.saxutils import escape
 
 # ===== Page config =====
 st.set_page_config(page_title="피수치 해석 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (v3.7 / Direct Input + 암별·소아·희귀암 패널)")
+st.title("🩸 피수치 자동 해석기 (v3.10 / 혈액암별 약제 + 소아 감염질환 표)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
-st.caption("✅ +버튼 없이 **직접 타이핑 입력** · 모바일 줄꼬임 방지 · PC 표 모드 · **암별/소아/희귀암 패널 지원**")
+st.caption("✅ +버튼 없이 **직접 타이핑 입력** · 모바일 줄꼬임 방지 · PC 표 모드 · **암별/소아/희귀암 패널 지원 + 소아 감염질환**")
 
 if "records" not in st.session_state:
     st.session_state.records = {}
@@ -99,6 +100,19 @@ ANTICANCER = {
                    "warn":["좌심실 기능 모니터"],"ix":[]},
     "Ifosfamide":{"alias":"이포스파미드","aes":["골수억제","신경독성","출혈성 방광염"],
                   "warn":["메스나 병용/수분섭취"],"ix":[]},
+    # Hematologic-specific
+    "Imatinib":{"alias":"이마티닙(TKI)","aes":["부종","근육통","피로","간수치 상승"],
+                "warn":["간기능/혈당 모니터"],"ix":["CYP3A4 상호작용"]},
+    "Dasatinib":{"alias":"다사티닙(TKI)","aes":["혈소판감소","흉막/심막 삼출","설사"],
+                 "warn":["호흡곤란/흉통 시 평가"],"ix":["CYP3A4 상호작용"]},
+    "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","고혈당","간수치 상승"],
+                 "warn":["공복 복용/ECG 모니터"],"ix":["CYP3A4 상호작용"]},
+    "Rituximab":{"alias":"리툭시맙","aes":["주입반응","감염 위험","HBV 재활성"],
+                 "warn":["HBV 스크리닝/모니터"],"ix":[]},
+    "Asparaginase":{"alias":"아스파라기나제(PEG)","aes":["췌장염","혈전","간독성","과민반응"],
+                    "warn":["복통/구토 시 평가"],"ix":[]},
+    "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
+           "warn":["ECG/전해질 모니터"],"ix":[]},
 }
 
 ABX_GUIDE = {
@@ -121,9 +135,28 @@ FOODS = {
 }
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
+# ===== Pediatrics (everyday/respiratory) =====
+PED_TOPICS = ["RSV/모세기관지염","영아 중이염","크룹","구토·설사(탈수)","열경련"]
+PED_INPUTS_INFO = (
+    "다음 공통 입력은 위험도 배너 산출에 사용됩니다.\n"
+    "- 나이(개월), 체온(℃), 호흡수(/분), 산소포화도(%), 24시간 소변 횟수, "
+    "함몰/견흔(0/1), 콧벌렁임(0/1), 무호흡(0/1)"
+)
+
+# ===== Pediatrics (infectious diseases) =====
+PED_INFECT = {
+    "RSV": {"핵심":"기침, 쌕쌕거림, 발열","진단":"항원검사 또는 PCR","특징":"모세기관지염 흔함, 겨울철 유행"},
+    "Adenovirus": {"핵심":"고열, 결막염, 설사","진단":"PCR","특징":"장염 + 눈충혈 동반 많음"},
+    "Rotavirus": {"핵심":"구토, 물설사","진단":"항원검사","특징":"탈수 위험 가장 큼"},
+    "Parainfluenza": {"핵심":"크룹, 쉰목소리","진단":"PCR","특징":"개짖는 기침 특징적"},
+    "HFMD (수족구병)": {"핵심":"입안 궤양, 손발 수포","진단":"임상진단","특징":"전염성 매우 강함"},
+    "Influenza (독감)": {"핵심":"고열, 근육통","진단":"신속검사 또는 PCR","특징":"해열제 효과 적음"},
+    "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"아직도 드물게 유행"},
+}
+
 # ===== Cancer-specific panels =====
 CANCER_SPECIFIC = {
-    # Blood cancers (labels only; inputs captured as custom extras)
+    # Blood cancers
     "AML": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),
             ("D-dimer","D-dimer","µg/mL FEU",2),("Blasts%","말초 혈액 blasts","%",0)],
     "APL": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),
@@ -272,14 +305,7 @@ def abx_summary(abx_dict):
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
     return lines
 
-# ===== Pediatrics (everyday/respiratory) =====
-PED_TOPICS = ["RSV/모세기관지염","영아 중이염","크룹","구토·설사(탈수)","열경련"]
-PED_INPUTS_INFO = (
-    "다음 공통 입력은 위험도 배너 산출에 사용됩니다.\n"
-    "- 나이(개월), 체온(℃), 호흡수(/분), 산소포화도(%), 24시간 소변 횟수, "
-    "함몰/견흔(0/1), 콧벌렁임(0/1), 무호흡(0/1)"
-)
-
+# ===== Pediatrics helpers =====
 def _parse_num_ped(label, key, decimals=1, placeholder=""):
     raw = st.text_input(label, key=key, placeholder=placeholder)
     return _parse_numeric(raw, decimals=decimals)
@@ -333,10 +359,11 @@ with c1:
 with c2:
     test_date = st.date_input("검사 날짜", value=date.today())
 
-mode = st.selectbox("모드 선택", ["일반/암", "소아(일상/호흡기)"])
+mode = st.selectbox("모드 선택", ["일반/암", "소아(일상/호흡기)", "소아(감염질환)"])
 
 group = None
 cancer = None
+infect_sel = None
 if mode == "일반/암":
     group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암", "소아암", "희귀암"])
     if group == "혈액암":
@@ -359,10 +386,26 @@ if mode == "일반/암":
         ])
     else:
         st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 추가 수치 패널**이 자동 노출됩니다.")
-else:
+elif mode == "소아(일상/호흡기)":
     st.markdown("### 🧒 소아 일상 주제 선택")
     st.caption(PED_INPUTS_INFO)
     ped_topic = st.selectbox("소아 주제", PED_TOPICS)
+else:
+    st.markdown("### 🧫 소아·영유아 감염질환")
+    infect_sel = st.selectbox("질환 선택", list(PED_INFECT.keys()))
+    info = PED_INFECT.get(infect_sel, {})
+    if HAS_PD:
+        _df = pd.DataFrame([{
+            "핵심": info.get("핵심",""),
+            "진단": info.get("진단",""),
+            "특징": info.get("특징",""),
+        }], index=[infect_sel])
+        st.table(_df)
+    else:
+        st.markdown(f"**{infect_sel}**")
+        st.write(f"- 핵심: {info.get('핵심','')}")
+        st.write(f"- 진단: {info.get('진단','')}")
+        st.write(f"- 특징: {info.get('특징','')}")
 
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
@@ -372,9 +415,19 @@ extras = {}
 
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
+
+    # Per-cancer default lists for hematologic malignancies
+    heme_by_cancer = {
+        "AML": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide",
+                "Etoposide","Fludarabine","Hydroxyurea","MTX"],
+        "APL": ["ATRA","ATO","Idarubicin","Daunorubicin","ARA-C","G-CSF"],
+        "ALL": ["Vincristine","Asparaginase","Daunorubicin","Cyclophosphamide","MTX","ARA-C","Topotecan","Etoposide"],
+        "CML": ["Imatinib","Dasatinib","Nilotinib","Hydroxyurea"],
+        "CLL": ["Fludarabine","Cyclophosphamide","Rituximab","Mitoxantrone"]
+    }
+
     default_drugs_by_group = {
-        "혈액암": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide",
-                 "Etoposide","Fludarabine","Hydroxyurea","Vincristine","MTX","ATRA"],
+        "혈액암": heme_by_cancer.get(cancer, []),
         "고형암": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine",
                  "5-FU","Doxorubicin","Cyclophosphamide","Trastuzumab","Oxaliplatin","Capecitabine",
                  "Irinotecan","Ifosfamide","Docetaxel","Paclitaxel"],
@@ -382,8 +435,10 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
                  "Cisplatin","Topotecan","Irinotecan"],
         "희귀암": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Gemcitabine","Ifosfamide","Doxorubicin"]
     }
+
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
+    # ARA-C special form/dose block
     if "ARA-C" in drug_list:
         st.markdown("**ARA-C (시타라빈)**")
         ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
@@ -393,6 +448,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         st.divider()
         drug_list.remove("ARA-C")
 
+    # Render remaining drugs
     for d in drug_list:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
@@ -418,8 +474,10 @@ extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일, 0=미�
 st.divider()
 if mode == "일반/암":
     st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
-else:
+elif mode == "소아(일상/호흡기)":
     st.header("2️⃣ 소아 공통 입력")
+else:
+    st.header("2️⃣ (감염질환은 별도 수치 입력 없음)")
 
 vals = {}
 
@@ -459,7 +517,7 @@ if mode == "일반/암":
         render_inputs_table()
     else:
         render_inputs_vertical()
-else:
+elif mode == "소아(일상/호흡기)":
     age_m        = _parse_num_ped("나이(개월)", key="ped_age", decimals=0, placeholder="예: 18")
     temp_c       = _parse_num_ped("체온(℃)", key="ped_temp", decimals=1, placeholder="예: 38.2")
     rr           = _parse_num_ped("호흡수(/분)", key="ped_rr", decimals=0, placeholder="예: 42")
@@ -485,6 +543,10 @@ elif mode == "소아(일상/호흡기)":
     st.divider()
     st.header("3️⃣ 소아 생활 가이드")
     ped_topic_tips(ped_topic)
+else:
+    st.divider()
+    st.header("3️⃣ 감염질환 요약")
+    st.info("표는 위 선택창에서 자동 생성됩니다.")
 
 # ===== Run =====
 st.divider()
@@ -507,8 +569,10 @@ if run:
         if fs:
             st.markdown("### 🥗 음식 가이드")
             for f in fs: st.write("- " + f)
-    else:
+    elif mode == "소아(일상/호흡기)":
         ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea)
+    else:
+        st.success("선택한 감염질환 요약을 보고서에 포함했습니다.")
 
     # 항암제 요약
     if meds:
@@ -535,8 +599,14 @@ if run:
             buf.append(f"- 암 그룹/종류: {group} / {cancer}\n")
         else:
             buf.append(f"- 암 그룹/종류: 미선택\n")
-    else:
+    elif mode == "소아(일상/호흡기)":
         buf.append(f"- 소아 주제: {ped_topic}\n")
+    else:
+        buf.append(f"- 소아 감염질환: {infect_sel}\n")
+        info = PED_INFECT.get(infect_sel, {})
+        buf.append("  - 핵심: " + info.get("핵심","") + "\n")
+        buf.append("  - 진단: " + info.get("진단","") + "\n")
+        buf.append("  - 특징: " + info.get("특징","") + "\n")
     buf.append("- 검사일: {}\n".format(test_date.isoformat()))
 
     if mode == "일반/암":
@@ -553,7 +623,7 @@ if run:
         if meds:
             buf.append("\n## 항암제 요약\n")
             for line in summarize_meds(meds): buf.append(line + "\n")
-    else:
+    elif mode == "소아(일상/호흡기)":
         buf.append("\n## 소아 공통 입력\n")
         def _ent(x):
             try: return x is not None and float(x)!=0
@@ -641,6 +711,7 @@ if run:
             "mode": mode,
             "group": group,
             "cancer": cancer,
+            "infect": infect_sel,
             "labs": {k: vals.get(k) for k in ORDER if entered(vals.get(k))},
             "extra": {k: v for k, v in (extra_vals or {}).items() if entered(v)},
             "meds": meds,
@@ -671,5 +742,6 @@ else:
         st.info("아직 저장된 기록이 없습니다.")
 
 # ===== Sticky disclaimer =====
-st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 포함. 공식카페: https://cafe.naver.com/bloodmap")
+st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
+
