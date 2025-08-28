@@ -112,8 +112,29 @@ ANTICANCER = {
     "Asparaginase":{"alias":"아스파라기나제(PEG)","aes":["췌장염","혈전","간독성","과민반응"],
                     "warn":["복통/구토 시 평가"],"ix":[]},
     "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
-           "warn":["ECG/전해질 모니터"],"ix":[]},
-}
+           "warn":["ECG/전해질 모니터"],"ix":[]},,
+    "Bevacizumab":{"alias":"베바시주맙(항-VEGF)","aes":["고혈압","단백뇨","출혈/천공 드묾"],"warn":["수술 전후 투여 중지"],"ix":[]},
+    "Cetuximab":{"alias":"세툭시맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["KRAS/NRAS WT에서만 효과"],"ix":[]},
+    "Panitumumab":{"alias":"파니투뮤맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
+    "Gefitinib":{"alias":"게피티닙(EGFR TKI)","aes":["간수치↑","설사","발진"],"warn":["간기능 모니터"],"ix":["CYP3A4 상호작용"]},
+    "Erlotinib":{"alias":"얼로티닙(EGFR TKI)","aes":["발진","설사"],"warn":["흡연 시 노출↓"],"ix":["CYP3A4 상호작용"]},
+    "Osimertinib":{"alias":"오시머티닙(EGFR TKI)","aes":["QT 연장","간수치↑"],"warn":["ECG/간기능"],"ix":[]},
+    "Alectinib":{"alias":"알렉티닙(ALK TKI)","aes":["변비","근육통","간수치↑"],"warn":["CPK/간기능"],"ix":[]},
+    "Sunitinib":{"alias":"수니티닙(TKI)","aes":["고혈압","피로","손발증후군"],"warn":["혈압/갑상선"],"ix":[]},
+    "Pazopanib":{"alias":"파조파닙(TKI)","aes":["간독성","고혈압"],"warn":["간기능"],"ix":[]},
+    "Sorafenib":{"alias":"소라페닙(TKI)","aes":["손발증후군","설사","고혈압"],"warn":["피부/혈압 모니터"],"ix":[]},
+    "Lenvatinib":{"alias":"렌바티닙(TKI)","aes":["고혈압","단백뇨"],"warn":["혈압/단백뇨 모니터"],"ix":[]},
+    "Olaparib":{"alias":"올라파립(PARP)","aes":["빈혈","피로","오심"],"warn":["혈구감소 모니터"],"ix":[]},
+    "Enzalutamide":{"alias":"엔잘루타마이드(AR)","aes":["피로","고혈압"],"warn":["경련 위험 드묾"],"ix":["CYP 상호작용"]},
+    "Abiraterone":{"alias":"아비라테론(AR)","aes":["저K혈증","고혈압","간수치↑"],"warn":["프레드니손 병용"],"ix":["CYP 상호작용"]},
+    "Cabazitaxel":{"alias":"카바지탁셀","aes":["호중구감소","설사"],"warn":["G-CSF 고려"],"ix":[]},
+    "Temozolomide":{"alias":"테모졸로마이드","aes":["골수억제","오심"],"warn":["PCP 예방 고려(고용량)"],"ix":[]},
+    "Lomustine":{"alias":"로무스틴(CCNU)","aes":["골수억제(지연)"],"warn":["간/혈구 모니터"],"ix":[]},
+    "Pertuzumab":{"alias":"퍼투주맙(HER2)","aes":["설사","피로"],"warn":["심기능"],"ix":[]},
+    "Regorafenib":{"alias":"레고라페닙(TKI)","aes":["손발증후군","고혈압"],"warn":["혈압/간기능"],"ix":[]},
+    "Atezolizumab":{"alias":"아테졸리주맙(PD-L1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육"],"ix":[]},
+
+}}
 
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
@@ -426,14 +447,49 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "CLL": ["Fludarabine","Cyclophosphamide","Rituximab","Mitoxantrone"]
     }
 
+
+    solid_by_cancer = {
+        "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
+                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab"],
+        "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab"],
+        "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel"],
+        "대장암(Colorectal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab"],
+        "간암(HCC)": ["Doxorubicin","Sorafenib","Lenvatinib","Atezolizumab","Bevacizumab"],
+        "췌장암(Pancreatic cancer)": ["Gemcitabine","Oxaliplatin","Irinotecan","5-FU"],
+        "담도암(Cholangiocarcinoma)": ["Gemcitabine","Cisplatin","Bevacizumab"],
+        "자궁내막암(Endometrial cancer)": ["Carboplatin","Paclitaxel"],
+        "구강암/후두암": ["Cisplatin","5-FU","Docetaxel"],
+        "피부암(흑색종)": ["Dacarbazine","Paclitaxel"],
+        "육종(Sarcoma)": ["Doxorubicin","Ifosfamide","Pazopanib"],
+        "신장암(RCC)": ["Sunitinib","Pazopanib","Bevacizumab"],
+        "갑상선암": ["Lenvatinib","Sorafenib"],
+        "난소암": ["Carboplatin","Paclitaxel","Bevacizumab","Olaparib"],
+        "자궁경부암": ["Cisplatin","Paclitaxel","Bevacizumab"],
+        "전립선암": ["Docetaxel","Cabazitaxel","Abiraterone","Enzalutamide"],
+        "뇌종양(Glioma)": ["Temozolomide","Lomustine","Bevacizumab"],
+        "식도암": ["Cisplatin","5-FU","Paclitaxel"],
+        "방광암": ["Cisplatin","Gemcitabine","Bevacizumab"]
+    }
+
+
+    rare_by_cancer = {
+        "담낭암(Gallbladder cancer)": ["Gemcitabine","Cisplatin"],
+        "부신암(Adrenal cancer)": ["Mitotane","Etoposide","Doxorubicin","Cisplatin"],
+        "망막모세포종(Retinoblastoma)": ["Vincristine","Etoposide","Carboplatin"],
+        "흉선종/흉선암(Thymoma/Thymic carcinoma)": ["Cyclophosphamide","Doxorubicin","Cisplatin"],
+        "신경내분비종양(NET)": ["Etoposide","Cisplatin","Sunitinib"],
+        "간모세포종(Hepatoblastoma)": ["Cisplatin","Doxorubicin"],
+        "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab"],
+        "GIST": ["Imatinib","Sunitinib","Regorafenib"]
+    }
+
+    
     default_drugs_by_group = {
         "혈액암": heme_by_cancer.get(cancer, []),
-        "고형암": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Pemetrexed","Gemcitabine",
-                 "5-FU","Doxorubicin","Cyclophosphamide","Trastuzumab","Oxaliplatin","Capecitabine",
-                 "Irinotecan","Ifosfamide","Docetaxel","Paclitaxel"],
+        "고형암": solid_by_cancer.get(cancer, []),
         "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin",
                  "Cisplatin","Topotecan","Irinotecan"],
-        "희귀암": ["Carboplatin","Cisplatin","Paclitaxel","Docetaxel","Gemcitabine","Ifosfamide","Doxorubicin"]
+        "희귀암": rare_by_cancer.get(cancer, [])
     }
 
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
@@ -744,4 +800,3 @@ else:
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
-
