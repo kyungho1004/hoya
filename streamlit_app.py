@@ -33,6 +33,24 @@ st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".fo
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
 st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
 
+# ===== Sidebar: optional Korean font upload for PDF =====
+with st.sidebar:
+    st.markdown("### 🖨️ PDF 한글 폰트 설정")
+    st.caption("PDF 글자 깨짐 방지를 위해 한글 폰트를 올리세요. (권장: *NanumGothic.ttf*, *NotoSansKR-Regular.otf*)")
+    _font_file = st.file_uploader("폰트 파일(.ttf/.otf)", type=["ttf","otf"], key="font_upload")
+    if _font_file is not None:
+        # Save to a predictable path
+        try:
+            _user_font_path = "user_korean_font." + (_font_file.name.split(".")[-1].lower())
+        except Exception:
+            _user_font_path = "user_korean_font.ttf"
+        with open(_user_font_path, "wb") as _fw:
+            _fw.write(_font_file.read())
+        st.success(f"폰트 저장 완료: {_user_font_path}")
+    else:
+        _user_font_path = None
+
+
 if "records" not in st.session_state:
     st.session_state.records = {}
 
