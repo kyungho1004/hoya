@@ -1,5 +1,5 @@
-
 from datetime import datetime, date
+import os
 import streamlit as st
 
 # ===== Optional deps =====
@@ -13,72 +13,24 @@ except Exception:
 try:
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.units import mm
-    from reportlab.lib import utils
     HAS_PDF = True
 except Exception:
     HAS_PDF = False
 
+# For safe text escaping in PDF
+from xml.sax.saxutils import escape
+
 # ===== Page config =====
 st.set_page_config(page_title="피수치 해석 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (v3.6 / Direct Input + 암별·소아·희귀암 패널)")
+st.title("🩸 피수치 자동 해석기 (v3.7 / Direct Input + 암별·소아·희귀암 패널)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
 st.caption("✅ +버튼 없이 **직접 타이핑 입력** · 모바일 줄꼬임 방지 · PC 표 모드 · **암별/소아/희귀암 패널 지원**")
-# ===== PDF Font (Korean) setup =====
-if "FONT_STATE" not in st.session_state:
-    st.session_state.FONT_STATE = {"font_name": None, "font_path": None}
-
-def _try_register_font(path, name="KRFont"):
-    try:
-        pdfmetrics.registerFont(TTFont(name, path))
-        st.session_state.FONT_STATE["font_name"] = name
-        st.session_state.FONT_STATE["font_path"] = path
-        return True
-    except Exception:
-        return False
-
-def _autodetect_korean_font():
-    import os
-    candidates = [
-        # Common Linux paths
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansCJKkr-Regular.otf",
-        "/usr/share/fonts/truetype/noto/NotoSansKR-Regular.otf",
-        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        # Windows
-        "C:/Windows/Fonts/malgun.ttf",
-        "C:/Windows/Fonts/NanumGothic.ttf",
-        # Mac
-        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
-        "/Library/Fonts/NanumGothic.ttf",
-    ]
-    for c in candidates:
-        if os.path.exists(c) and _try_register_font(c):
-            return True
-    return False
-
-with st.expander("🖨️ PDF 한글 폰트 설정 (깨짐 방지)", expanded=False):
-    up = st.file_uploader("한글 지원 TTF/OTF 업로드 (예: NanumGothic.ttf, NotoSansKR-Regular.otf)", type=["ttf","otf","ttc"], key="pdf_font_upload")
-    if up is not None:
-        import tempfile
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        tmp.write(up.read()); tmp.flush()
-        if _try_register_font(tmp.name, name="UserKRFont"):
-            st.success("PDF 폰트 등록 완료: 사용자 업로드")
-        else:
-            st.error("업로드한 폰트를 등록하지 못했습니다. 다른 파일을 시도해 주세요.")
-    elif not st.session_state.FONT_STATE["font_name"]:
-        if _autodetect_korean_font():
-            st.info("시스템에서 한글 폰트를 자동으로 찾았습니다.")
-        else:
-            st.warning("한글 폰트를 찾지 못했습니다. 위에 폰트 파일을 업로드하면 PDF가 깨지지 않습니다.")
-
 
 if "records" not in st.session_state:
     st.session_state.records = {}
@@ -88,35 +40,7 @@ ORDER = ["WBC","Hb","PLT","ANC","Ca","P","Na","K","Albumin","Glucose","Total Pro
 
 DISCLAIMER = ("※ 본 자료는 보호자의 이해를 돕기 위한 참고용 정보입니다. "
               "진단 및 처방은 하지 않으며, 모든 의학적 판단은 의료진의 권한입니다. "
-              "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다."
-
-# Human-friendly labels to avoid auto-translation issues (e.g., "Ca" -> "캘리포니아")
-DISPLAY_LABELS = {
-    "WBC":"백혈구 (WBC)",
-    "Hb":"헤모글로빈 (Hb)",
-    "PLT":"혈소판 (PLT)",
-    "ANC":"절대호중구 (ANC)",
-    "Ca":"칼슘 (Ca)",
-    "P":"인 (P)",
-    "Na":"나트륨 (Na)",
-    "K":"칼륨 (K)",
-    "Albumin":"알부민",
-    "Glucose":"포도당 (Glucose)",
-    "Total Protein":"총 단백질",
-    "AST":"AST (GOT)",
-    "ALT":"ALT (GPT)",
-    "LDH":"LDH",
-    "CRP":"CRP",
-    "Cr":"크레아티닌 (Cr)",
-    "UA":"요산 (UA)",
-    "TB":"총 빌리루빈 (TB)",
-    "BUN":"BUN",
-    "BNP":"BNP"
-}
-
-def label_of(name: str) -> str:
-    return DISPLAY_LABELS.get(name, name)
-)
+              "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다.")
 
 # ===== Drug dictionaries =====
 ANTICANCER = {
@@ -344,7 +268,7 @@ def abx_summary(abx_dict):
         except Exception: use=0.0
         if use>0:
             tip=", ".join(ABX_GUIDE.get(k, []))
-            shown=f"{int(use)}" if use.is_integer() else f"{use:.1f}"
+            shown=f"{int(use)}" if float(use).is_integer() else f"{use:.1f}"
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
     return lines
 
@@ -503,11 +427,11 @@ def render_inputs_vertical():
     st.markdown("**기본 패널**")
     for name in ORDER:
         if name == "CRP":
-            vals[name] = num_input_generic(f"{label_of(name)}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=2, placeholder="예: 0.12")
         elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-            vals[name] = num_input_generic(f"{label_of(name)}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 1200")
         else:
-            vals[name] = num_input_generic(f"{label_of(name)}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
+            vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=1, placeholder="예: 3.5")
 
 def render_inputs_table():
     st.markdown("**기본 패널 (표 모드)**")
@@ -516,19 +440,19 @@ def render_inputs_table():
     with left:
         for name in ORDER[:half]:
             if name == "CRP":
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
+                vals[name] = num_input_generic(f"{name}", key=f"l_{name}", decimals=1, placeholder="예: 3.5")
     with right:
         for name in ORDER[half:]:
             if name == "CRP":
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=2, placeholder="예: 0.12")
             elif name in ("WBC","ANC","AST","ALT","LDH","BNP","Glucose"):
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 1200")
             else:
-                vals[name] = num_input_generic(f"{label_of(name)}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
+                vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
 
 if mode == "일반/암":
     if table_mode:
@@ -661,33 +585,47 @@ if run:
 
     if HAS_PDF:
         def md_to_pdf_bytes(md_text: str) -> bytes:
-            buf = BytesIO()
-            doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
+            # Try to register a Korean font if present
+            font_registered = False
+            font_name = 'NanumGothic'
+            for candidate in ['NanumGothic.ttf', 'NotoSansKR-Regular.otf', 'NanumGothic.otf']:
+                if os.path.exists(candidate):
+                    try:
+                        pdfmetrics.registerFont(TTFont(font_name, candidate))
+                        font_registered = True
+                        break
+                    except Exception:
+                        pass
+
+            buf_pdf = BytesIO()
+            doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
                                     topMargin=15*mm, bottomMargin=15*mm)
             styles = getSampleStyleSheet()
-    base_font = st.session_state.FONT_STATE.get("font_name") or "Helvetica"
-    styles.add(ParagraphStyle(name="KRBody", parent=styles["BodyText"], fontName=base_font, leading=14))
-    styles.add(ParagraphStyle(name="KRHeading2", parent=styles["Heading2"], fontName=base_font))
-    styles.add(ParagraphStyle(name="KRTitle", parent=styles["Title"], fontName=base_font))
-    story = []
+            # Force styles to use Korean-capable font if available
+            target_font = font_name if font_registered else styles['BodyText'].fontName
+            for s in ['Title','Heading1','Heading2','BodyText']:
+                if s in styles.byName:
+                    styles[s].fontName = target_font
+
+            story = []
             for line in md_text.splitlines():
                 line = line.strip()
                 if not line:
                     story.append(Spacer(1, 4*mm))
                     continue
                 if line.startswith("# "):
-                    p = Paragraph(f"<b>{utils.escapeOnce(line[2:])}</b>", styles['KRTitle'])
+                    p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
                 elif line.startswith("## "):
-                    p = Paragraph(f"<b>{utils.escapeOnce(line[3:])}</b>", styles['KRHeading2'])
+                    p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
                 elif line.startswith("- "):
-                    p = Paragraph("• " + utils.escapeOnce(line[2:]), styles['KRBody'])
+                    p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
                 elif line.startswith("> "):
-                    p = Paragraph(f"<i>{utils.escapeOnce(line[2:])}</i>", styles['KRBody'])
+                    p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
                 else:
-                    p = Paragraph(utils.escapeOnce(line), styles['KRBody'])
+                    p = Paragraph(escape(line), styles['BodyText'])
                 story.append(p)
             doc.build(story)
-            return buf.getvalue()
+            return buf_pdf.getvalue()
 
         pdf_bytes = md_to_pdf_bytes(report_md)
         st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
@@ -724,6 +662,7 @@ else:
         rows = st.session_state.records.get(sel, [])
         if rows:
             data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC","Hb","PLT","CRP","ANC"]}} for r in rows ]
+            import pandas as pd  # local import for safety
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
         else:
