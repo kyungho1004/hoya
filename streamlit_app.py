@@ -1,3 +1,4 @@
+
 from datetime import datetime, date
 import os
 import streamlit as st
@@ -491,8 +492,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
 drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
-
-    for d in selected_drugs:
+for d in selected_drugs:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
             amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수", key=f"med_{d}", as_int=True, placeholder="예: 2")
@@ -514,7 +514,6 @@ extras["abx"] = {}
 abx_search = st.text_input("🔍 항생제 검색", key="abx_search")
 abx_choices = [a for a in ABX_GUIDE.keys() if not abx_search or abx_search.lower() in a.lower() or any(abx_search.lower() in tip.lower() for tip in ABX_GUIDE[a])]
 selected_abx = st.multiselect("항생제 계열 선택", abx_choices, default=[])
-
 for abx in selected_abx:
     extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
 
@@ -1015,5 +1014,3 @@ with st.expander("열기 / 닫기", expanded=False):
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
-
-
