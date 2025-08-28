@@ -28,10 +28,10 @@ from xml.sax.saxutils import escape
 
 # ===== Page config =====
 st.set_page_config(page_title="피수치 해석 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 자동 해석기 (v3.10 / 혈액암별 약제 + 소아 감염질환 표)")
+st.title("🩸 피수치 자동 해석기 (v3.11-fixed / 암종별 약제 + 표적치료 포함)")
 st.markdown("👤 **제작자: Hoya / 자문: GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
-st.caption("✅ +버튼 없이 **직접 타이핑 입력** · 모바일 줄꼬임 방지 · PC 표 모드 · **암별/소아/희귀암 패널 지원 + 소아 감염질환**")
+st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
 
 if "records" not in st.session_state:
     st.session_state.records = {}
@@ -43,7 +43,7 @@ DISCLAIMER = ("※ 본 자료는 보호자의 이해를 돕기 위한 참고용 
               "진단 및 처방은 하지 않으며, 모든 의학적 판단은 의료진의 권한입니다. "
               "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다.")
 
-# ===== Drug dictionaries =====
+# ===== Drug dictionaries (including targeted/IO) =====
 ANTICANCER = {
     "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],
             "warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],
@@ -113,12 +113,13 @@ ANTICANCER = {
                     "warn":["복통/구토 시 평가"],"ix":[]},
     "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
            "warn":["ECG/전해질 모니터"],"ix":[]},
-    "Bevacizumab":{"alias":"베바시주맙(항-VEGF)","aes":["고혈압","단백뇨","출혈/천공 드묾"],"warn":["수술 전후 투여 중지"],"ix":[]},
+    # Targeted / IO
+    "Bevacizumab":{"alias":"베바시주맙(anti-VEGF)","aes":["고혈압","단백뇨","출혈/천공(드묾)"],"warn":["수술 전후 투여 중지"],"ix":[]},
     "Cetuximab":{"alias":"세툭시맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["KRAS/NRAS WT에서만 효과"],"ix":[]},
-    "Panitumumab":{"alias":"파니투뮤맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
+    "Panitumumab":{"alias":"파니투무맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
     "Gefitinib":{"alias":"게피티닙(EGFR TKI)","aes":["간수치↑","설사","발진"],"warn":["간기능 모니터"],"ix":["CYP3A4 상호작용"]},
     "Erlotinib":{"alias":"얼로티닙(EGFR TKI)","aes":["발진","설사"],"warn":["흡연 시 노출↓"],"ix":["CYP3A4 상호작용"]},
-    "Osimertinib":{"alias":"오시머티닙(EGFR TKI)","aes":["QT 연장","간수치↑"],"warn":["ECG/간기능"],"ix":[]},
+    "Osimertinib":{"alias":"오시머티닙(EGFR T790M/1L)","aes":["QT 연장","간수치↑"],"warn":["ECG/간기능"],"ix":[]},
     "Alectinib":{"alias":"알렉티닙(ALK TKI)","aes":["변비","근육통","간수치↑"],"warn":["CPK/간기능"],"ix":[]},
     "Sunitinib":{"alias":"수니티닙(TKI)","aes":["고혈압","피로","손발증후군"],"warn":["혈압/갑상선"],"ix":[]},
     "Pazopanib":{"alias":"파조파닙(TKI)","aes":["간독성","고혈압"],"warn":["간기능"],"ix":[]},
@@ -133,7 +134,42 @@ ANTICANCER = {
     "Pertuzumab":{"alias":"퍼투주맙(HER2)","aes":["설사","피로"],"warn":["심기능"],"ix":[]},
     "Regorafenib":{"alias":"레고라페닙(TKI)","aes":["손발증후군","고혈압"],"warn":["혈압/간기능"],"ix":[]},
     "Atezolizumab":{"alias":"아테졸리주맙(PD-L1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육"],"ix":[]},
-
+    "Mitotane":{"alias":"미토테인","aes":["피로","어지럼","구토"],"warn":["호르몬 보충 필요 가능"],"ix":[]},
+    "Dacarbazine":{"alias":"다카바진","aes":["골수억제","오심"],"warn":[],"ix":[]},
+    "Pembrolizumab":{"alias":"펨브롤리주맙(PD-1)","aes":["면역관련 이상반응(피부, 갑상선, 폐렴, 대장염 등)"],
+                     "warn":["증상 발생 시 스테로이드 치료 고려, 지연발현 가능"],"ix":[]},
+    "Nivolumab":{"alias":"니볼루맙(PD-1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육/모니터"],"ix":[]},
+    "Avelumab":{"alias":"\uc544\ubca8\ub8e8\ub9d9(PD-L1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
+    "Durvalumab":{"alias":"\ub354\ubc1c\ub8e8\ub9d9(PD-L1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
+    "Ipilimumab":{"alias":"\uc774\ud544\ub9ac\ubb34\ub9d9(CTLA-4)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751\u2191"], "warn":["\uace0\uc6a9\ub7c9 \uc2a4\ud14c\ub85c\uc774\ub4dc \ud544\uc694 \uac00\ub2a5"], "ix":[]},
+    "Tremelimumab":{"alias":"\ud2b8\ub808\uba5c\ub9ac\ubb34\ub9d9(CTLA-4)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751\u2191"], "warn":["\uac04\ub3c5\uc131 \uc8fc\uc758"], "ix":[]},
+    "Cemiplimab":{"alias":"\uc138\ubbf8\ud50c\ub9ac\ub9d9(PD-1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["\uba74\uc5ed\ub3c5\uc131 \uad50\uc721"], "ix":[]},
+    "Dostarlimab":{"alias":"\ub3c4\uc2a4\ud0c0\ub97c\ub9ac\ub9d9(PD-1)", "aes":["\uba74\uc5ed\uad00\ub828 \uc774\uc0c1\ubc18\uc751"], "warn":["MSI-H/\uc11c\ub85c\ud45c\uc9c0 \ud655\uc778"], "ix":[]},
+    "Ado-trastuzumab emtansine (T-DM1)":{"alias":"T-DM1(\uce74\ub4dc\uc2e4\ub77c)", "aes":["\ud608\uc18c\ud310\uac10\uc18c", "\uac04\ub3c5\uc131"], "warn":["\uc2ec\uae30\ub2a5/\uac04\uae30\ub2a5"], "ix":[]},
+    "Trastuzumab deruxtecan (T-DXd)":{"alias":"T-DXd", "aes":["\uac04\uc9c8\uc131\ud3d0\uc9c8\ud658(ILD)", "\uc624\uc2ec"], "warn":["\ud638\ud761\uace4\ub780\uc2dc \uc989\uc2dc \uc911\ub2e8"], "ix":[]},
+    "Lapatinib":{"alias":"\ub77c\ud30c\ud2f0\ub2d9(HER2 TKI)", "aes":["\uc124\uc0ac", "\ubc1c\uc9c4"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
+    "Tucatinib":{"alias":"\ud22c\uce74\ud2f0\ub2d9(HER2 TKI)", "aes":["\uac04\uc218\uce58\u2191", "\uc124\uc0ac"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
+    "Dabrafenib":{"alias":"\ub2e4\ube0c\ub77c\ud398\ub2d9(BRAF)", "aes":["\ubc1c\uc5f4", "\ud53c\ubd80\ubc1c\uc9c4"], "warn":["\ubcd1\uc6a9 \ud2b8\ub77c\uba54\ud2f0\ub2d9"], "ix":[]},
+    "Trametinib":{"alias":"\ud2b8\ub77c\uba54\ud2f0\ub2d9(MEK)", "aes":["\uc2ec\uadfc\uae30\ub2a5\uc800\ud558", "\ud53c\ubd80\ubc1c\uc9c4"], "warn":["\uc2ec\ucd08\uc74c\ud30c"], "ix":[]},
+    "Encorafenib":{"alias":"\uc5d4\ucf54\ub77c\ud398\ub2d9(BRAF)", "aes":["\ud53c\ubd80\ub3c5\uc131", "\uad00\uc808\ud1b5"], "warn":[], "ix":[]},
+    "Binimetinib":{"alias":"\ube44\ub2c8\uba54\ud2f0\ub2d9(MEK)", "aes":["\ub9dd\ub9c9\uc7a5\uc561\uc131", "CK \uc0c1\uc2b9"], "warn":[], "ix":[]},
+    "Sotorasib":{"alias":"\uc18c\ud1a0\ub77c\uc2ed(KRAS G12C)", "aes":["\uac04\uc218\uce58\u2191", "\uc124\uc0ac"], "warn":["CYP \uc0c1\ud638\uc791\uc6a9"], "ix":[]},
+    "Adagrasib":{"alias":"\uc544\ub2e4\uac00\ub77c\uc2ed(KRAS G12C)", "aes":["\uad6c\uc5ed/\uc124\uc0ac", "QT \uc5f0\uc7a5"], "warn":[], "ix":[]},
+    "Selpercatinib":{"alias":"\uc140\ud37c\uce74\ud2f0\ub2d9(RET)", "aes":["\uace0\ud608\uc555", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
+    "Pralsetinib":{"alias":"\ud504\ub784\uc138\ud2f0\ub2d9(RET)", "aes":["\uac04\uc218\uce58\u2191", "\uace0\ud608\uc555"], "warn":[], "ix":[]},
+    "Crizotinib":{"alias":"\ud06c\ub9ac\uc870\ud2f0\ub2d9(ALK/ROS1)", "aes":["\uc2dc\uc57c\uc7a5\uc560", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
+    "Lorlatinib":{"alias":"\ub864\ub77c\ud2f0\ub2d9(ALK)", "aes":["\uc9c0\uc9c8\uc774\uc0c1", "CNS \uc99d\uc0c1"], "warn":["\uc9c0\uc9c8\ubaa8\ub2c8\ud130"], "ix":[]},
+    "Capmatinib":{"alias":"\ucea1\ub9c8\ud2f0\ub2d9(MET)", "aes":["\uac04\uc218\uce58\u2191", "\ub9d0\ucd08\ubd80\uc885"], "warn":[], "ix":[]},
+    "Tepotinib":{"alias":"\ud14c\ud3ec\ud2f0\ub2d9(MET)", "aes":["\ubd80\uc885", "\uac04\uc218\uce58\u2191"], "warn":[], "ix":[]},
+    "Larotrectinib":{"alias":"\ub77c\ub85c\ud2b8\ub809\ud2f0\ub2d9(NTRK)", "aes":["\ud53c\ub85c", "\uc5b4\uc9c0\ub7fc"], "warn":[], "ix":[]},
+    "Entrectinib":{"alias":"\uc5d4\ud2b8\ub809\ud2f0\ub2d9(NTRK/ROS1)", "aes":["\uc5b4\uc9c0\ub7fc", "\uccb4\uc911\uc99d\uac00"], "warn":[], "ix":[]},
+    "Axitinib":{"alias":"\uc545\uc2dc\ud2f0\ub2d9(TKI)", "aes":["\uace0\ud608\uc555", "\uc124\uc0ac"], "warn":["\ud608\uc555\ubaa8\ub2c8\ud130"], "ix":[]},
+    "Cabozantinib":{"alias":"\uce74\ubcf4\uc794\ud2f0\ub2d9(TKI)", "aes":["\uc190\ubc1c\uc99d\ud6c4\uad70", "\uc124\uc0ac"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
+    "Everolimus":{"alias":"\uc5d0\ubca0\ub85c\ub9ac\ubb34\uc2a4(mTOR)", "aes":["\uad6c\ub0b4\uc5fc", "\uace0\ud608\ub2f9"], "warn":["\ud608\ub2f9/\uc9c0\uc9c8"], "ix":[]},
+    "Ramucirumab":{"alias":"\ub77c\ubb34\uc2dc\ub8e8\ub9d9(anti-VEGFR2)", "aes":["\uace0\ud608\uc555", "\ucd9c\ud608"], "warn":[], "ix":[]},
+    "Niraparib":{"alias":"\ub2c8\ub77c\ud30c\ub9bd(PARP)", "aes":["\ud608\uc18c\ud310\uac10\uc18c", "\ud53c\ub85c"], "warn":["\ud608\uad6c\uac10\uc18c \ubaa8\ub2c8\ud130"], "ix":[]},
+    "Rucaparib":{"alias":"\ub8e8\uce74\ud30c\ub9bd(PARP)", "aes":["\uac04\uc218\uce58\u2191", "\ud53c\ub85c"], "warn":["\uac04\uae30\ub2a5"], "ix":[]},
+    "Talazoparib":{"alias":"\ud0c8\ub77c\uc870\ud30c\ub9bd(PARP)", "aes":["\ube48\ud608", "\ud53c\ub85c"], "warn":["\ud608\uad6c\uac10\uc18c \ubaa8\ub2c8\ud130"], "ix":[]},
 }
 
 ABX_GUIDE = {
@@ -172,7 +208,7 @@ PED_INFECT = {
     "Parainfluenza": {"핵심":"크룹, 쉰목소리","진단":"PCR","특징":"개짖는 기침 특징적"},
     "HFMD (수족구병)": {"핵심":"입안 궤양, 손발 수포","진단":"임상진단","특징":"전염성 매우 강함"},
     "Influenza (독감)": {"핵심":"고열, 근육통","진단":"신속검사 또는 PCR","특징":"해열제 효과 적음"},
-    "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"아직도 드물게 유행"},
+    "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"아직도 드물게 유행"}
 }
 
 # ===== Cancer-specific panels =====
@@ -192,25 +228,25 @@ CANCER_SPECIFIC = {
     "Wilms tumor": [("Abd U/S","복부초음파 소견 점수","pt",0),("BP","혈압 백분위수(%)","%",0)],
 
     # Solid cancers (common)
-    "폐암(Lung cancer)": [("CEA","CEA","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1),("NSE","Neuron-specific enolase","ng/mL",1)],
+    "폐암(Lung cancer)": [("CEA","CEA","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1),("NSE","Neuron-specific enolase","ng/mL",1), "Pembrolizumab", "Nivolumab"],
     "유방암(Breast cancer)": [("CA15-3","CA15-3","U/mL",1),("CEA","CEA","ng/mL",1),("HER2","HER2","IHC/FISH",0),("ER/PR","ER/PR","%",0)],
-    "위암(Gastric cancer)": [("CEA","CEA","ng/mL",1),("CA72-4","CA72-4","U/mL",1),("CA19-9","CA19-9","U/mL",1)],
-    "대장암(Colorectal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1)],
+    "위암(Gastric cancer)": [("CEA","CEA","ng/mL",1),("CA72-4","CA72-4","U/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
+    "대장암(Colorectal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
     "간암(HCC)": [("AFP","AFP","ng/mL",1),("PIVKA-II","PIVKA-II(DCP)","mAU/mL",0)],
     "췌장암(Pancreatic cancer)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
     "담도암(Cholangiocarcinoma)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
     "자궁내막암(Endometrial cancer)": [("CA125","CA125","U/mL",1),("HE4","HE4","pmol/L",1)],
     "구강암/후두암": [("SCC Ag","SCC antigen","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1)],
-    "피부암(흑색종)": [("S100","S100","µg/L",1),("LDH","LDH","U/L",0)],
+    "피부암(흑색종)": [("S100","S100","µg/L",1),("LDH","LDH","U/L",0), "Nivolumab", "Pembrolizumab"],
     "육종(Sarcoma)": [("ALP","ALP","U/L",0),("CK","CK","U/L",0)],
-    "신장암(RCC)": [("CEA","CEA","ng/mL",1),("LDH","LDH","U/L",0)],
+    "신장암(RCC)": [("CEA","CEA","ng/mL",1),("LDH","LDH","U/L",0), "Nivolumab", "Pembrolizumab"],
     "갑상선암": [("Tg","Thyroglobulin","ng/mL",1),("Anti-Tg Ab","Anti-Tg Ab","IU/mL",1)],
     "난소암": [("CA125","CA125","U/mL",1),("HE4","HE4","pmol/L",1)],
     "자궁경부암": [("SCC Ag","SCC antigen","ng/mL",1)],
     "전립선암": [("PSA","PSA","ng/mL",1)],
     "뇌종양(Glioma)": [("IDH1/2","IDH1/2 mutation","0/1",0),("MGMT","MGMT methylation","0/1",0)],
-    "식도암": [("SCC Ag","SCC antigen","ng/mL",1),("CEA","CEA","ng/mL",1)],
-    "방광암": [("NMP22","NMP22","U/mL",1),("UBC","UBC","µg/L",1)],
+    "식도암": [("SCC Ag","SCC antigen","ng/mL",1),("CEA","CEA","ng/mL",1), "Nivolumab", "Pembrolizumab"],
+    "방광암": [("NMP22","NMP22","U/mL",1),("UBC","UBC","µg/L",1), "Pembrolizumab", "Nivolumab"],
 
     # Rare cancers
     "담낭암(Gallbladder cancer)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
@@ -220,7 +256,29 @@ CANCER_SPECIFIC = {
     "신경내분비종양(NET)": [("Chromogranin A","CgA","ng/mL",1),("5-HIAA(urine)","5-HIAA(소변)","mg/24h",2)],
     "간모세포종(Hepatoblastoma)": [("AFP","AFP","ng/mL",1)],
     "비인두암(NPC)": [("EBV DNA","EBV DNA","IU/mL",0),("VCA IgA","VCA IgA","titer",1)],
-    "GIST": [("KIT mutation","KIT mutation","0/1",0),("PDGFRA mutation","PDGFRA mutation","0/1",0)],
+    "GIST": [("KIT mutation","KIT mutation","0/1",0),("PDGFRA mutation","PDGFRA mutation","0/1",0)]
+}
+
+# ===== Regimen shorthand (labels) =====
+REGIMENS = {
+    "FOLFOX": {"설명": "5-FU + Leucovorin + Oxaliplatin (대장암/위암 등)",
+    "AC": {"설명": "Doxorubicin + Cyclophosphamide (유방암)"},
+    "AC-T": {"설명": "AC 후 Paclitaxel/Docetaxel (유방암 표준)"},
+    "TCHP": {"설명": "Docetaxel + Carboplatin + Trastuzumab + Pertuzumab (HER2 유방암)"},
+    "T-DM1": {"설명": "Ado-trastuzumab emtansine (HER2 유방암)"},
+    "T-DXd": {"설명": "Trastuzumab deruxtecan (HER2-low 포함)"},
+    "mFOLFOX6": {"설명": "Modified FOLFOX6 (대장암 등)"},
+    "XELOX": {"설명": "Capecitabine + Oxaliplatin (=CAPOX)"},
+    "FLOT": {"설명": "5-FU + Leucovorin + Oxaliplatin + Docetaxel (위암)"},
+    "GEMCIS": {"설명": "Gemcitabine + Cisplatin (담도/담낭암 표준)"},
+    "GEMOX": {"설명": "Gemcitabine + Oxaliplatin (담도암)"},
+    "GP": {"설명": "Gemcitabine + Cisplatin (비인두암)"},
+    "PC": {"설명": "Pemetrexed + Cisplatin (비소세포폐암)"},
+    "CARBO-TAXOL": {"설명": "Carboplatin + Paclitaxel (폐암/난소암 등)"},
+    "GEMNAB": {"설명": "Gemcitabine + nab-Paclitaxel (췌장암)"}},
+    "FOLFIRI": {"설명": "5-FU + Leucovorin + Irinotecan (대장암)"},
+    "FOLFIRINOX": {"설명": "5-FU + Leucovorin + Irinotecan + Oxaliplatin (췌장암)"},
+    "CAPOX": {"설명": "Capecitabine + Oxaliplatin (대장암/위암)"},
 }
 
 # ===== Helpers =====
@@ -305,7 +363,7 @@ def summarize_meds(meds: dict):
     out=[]
     for k, v in meds.items():
         info=ANTICANCER.get(k)
-        if not info: 
+        if not info:
             continue
         line=f"• {k} ({info['alias']}): AE {', '.join(info['aes'])}"
         if info.get("warn"): line += f" | 주의: {', '.join(info['warn'])}"
@@ -447,43 +505,42 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "CLL": ["Fludarabine","Cyclophosphamide","Rituximab","Mitoxantrone"]
     }
 
-
+    # Solid tumors (per cancer, includes targeted)
     solid_by_cancer = {
         "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
-                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab"],
-        "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab"],
-        "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel"],
-        "대장암(Colorectal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab"],
-        "간암(HCC)": ["Doxorubicin","Sorafenib","Lenvatinib","Atezolizumab","Bevacizumab"],
+                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab", "Durvalumab", "Crizotinib", "Lorlatinib", "Selpercatinib", "Pralsetinib", "Capmatinib", "Tepotinib", "Sotorasib", "Adagrasib", "Larotrectinib", "Entrectinib"],
+        "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab", "Ado-trastuzumab emtansine (T-DM1)", "Trastuzumab deruxtecan (T-DXd)", "Lapatinib", "Tucatinib"],
+        "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel", "Ramucirumab", "Trastuzumab", "Pembrolizumab"],
+        "대장암(Colorectal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab", "Regorafenib", "Ramucirumab", "Pembrolizumab"],
+        "간암(HCC)": ["Doxorubicin","Sorafenib","Lenvatinib","Atezolizumab","Bevacizumab", "Durvalumab", "Tremelimumab", "Ramucirumab"],
         "췌장암(Pancreatic cancer)": ["Gemcitabine","Oxaliplatin","Irinotecan","5-FU"],
         "담도암(Cholangiocarcinoma)": ["Gemcitabine","Cisplatin","Bevacizumab"],
-        "자궁내막암(Endometrial cancer)": ["Carboplatin","Paclitaxel"],
+        "자궁내막암(Endometrial cancer)": ["Carboplatin","Paclitaxel", "Dostarlimab"],
         "구강암/후두암": ["Cisplatin","5-FU","Docetaxel"],
-        "피부암(흑색종)": ["Dacarbazine","Paclitaxel"],
+        "피부암(흑색종)": ["Dacarbazine","Paclitaxel", "Ipilimumab", "Dabrafenib", "Trametinib", "Encorafenib", "Binimetinib", "Cemiplimab"],
         "육종(Sarcoma)": ["Doxorubicin","Ifosfamide","Pazopanib"],
-        "신장암(RCC)": ["Sunitinib","Pazopanib","Bevacizumab"],
-        "갑상선암": ["Lenvatinib","Sorafenib"],
-        "난소암": ["Carboplatin","Paclitaxel","Bevacizumab","Olaparib"],
+        "신장암(RCC)": ["Sunitinib","Pazopanib","Bevacizumab", "Axitinib", "Cabozantinib", "Everolimus", "Ipilimumab", "Nivolumab", "Pembrolizumab"],
+        "갑상선암": ["Lenvatinib","Sorafenib", "Selpercatinib", "Pralsetinib"],
+        "난소암": ["Carboplatin","Paclitaxel","Bevacizumab","Olaparib", "Niraparib", "Rucaparib", "Talazoparib"],
         "자궁경부암": ["Cisplatin","Paclitaxel","Bevacizumab"],
         "전립선암": ["Docetaxel","Cabazitaxel","Abiraterone","Enzalutamide"],
         "뇌종양(Glioma)": ["Temozolomide","Lomustine","Bevacizumab"],
-        "식도암": ["Cisplatin","5-FU","Paclitaxel"],
-        "방광암": ["Cisplatin","Gemcitabine","Bevacizumab"]
+        "식도암": ["Cisplatin","5-FU","Paclitaxel", "Nivolumab", "Pembrolizumab", "Ramucirumab"],
+        "방광암": ["Cisplatin","Gemcitabine","Bevacizumab", "Avelumab", "Durvalumab", "Pembrolizumab", "Nivolumab"]
     }
 
-
+    # Rare tumors (per cancer)
     rare_by_cancer = {
         "담낭암(Gallbladder cancer)": ["Gemcitabine","Cisplatin"],
         "부신암(Adrenal cancer)": ["Mitotane","Etoposide","Doxorubicin","Cisplatin"],
         "망막모세포종(Retinoblastoma)": ["Vincristine","Etoposide","Carboplatin"],
         "흉선종/흉선암(Thymoma/Thymic carcinoma)": ["Cyclophosphamide","Doxorubicin","Cisplatin"],
-        "신경내분비종양(NET)": ["Etoposide","Cisplatin","Sunitinib"],
+        "신경내분비종양(NET)": ["Etoposide","Cisplatin","Sunitinib", "Everolimus"],
         "간모세포종(Hepatoblastoma)": ["Cisplatin","Doxorubicin"],
-        "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab"],
+        "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab", "Nivolumab", "Pembrolizumab"],
         "GIST": ["Imatinib","Sunitinib","Regorafenib"]
     }
 
-    
     default_drugs_by_group = {
         "혈액암": heme_by_cancer.get(cancer, []),
         "고형암": solid_by_cancer.get(cancer, []),
@@ -493,6 +550,11 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     }
 
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
+    # Optional regimen labels (for report only)
+    regimen_choices = []
+    if group in ["고형암","희귀암"]:
+        regimen_choices = st.multiselect("레짐(선택사항)", list(REGIMENS.keys()), help="예: FOLFOX/FOLFIRI/FOLFIRINOX/CAPOX 등. 보고서에 이름과 간단 설명이 포함됩니다.")
+    
 
     # ARA-C special form/dose block
     if "ARA-C" in drug_list:
@@ -664,6 +726,16 @@ if run:
         buf.append("  - 진단: " + info.get("진단","") + "\n")
         buf.append("  - 특징: " + info.get("특징","") + "\n")
     buf.append("- 검사일: {}\n".format(test_date.isoformat()))
+    # Regimen summary (if any)
+    try:
+        if mode == "일반/암" and group in ["고형암","희귀암"] and regimen_choices:
+            buf.append("\n## 레짐(요약)\n")
+            for rname in regimen_choices:
+                desc = REGIMENS.get(rname, {}).get("설명","")
+                buf.append(f"- {rname}: {desc}\n")
+    except Exception:
+        pass
+
 
     if mode == "일반/암":
         buf.append("\n## 입력 수치(기본)\n")
@@ -800,3 +872,4 @@ else:
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
+
