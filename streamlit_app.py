@@ -3,6 +3,10 @@ from datetime import datetime, date
 import os
 import streamlit as st
 
+# Ensure fonts folder exists
+os.makedirs("fonts", exist_ok=True)
+
+
 # ===== Optional deps =====
 try:
     import pandas as pd
@@ -35,6 +39,10 @@ st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 
 
 # ===== Sidebar: optional Korean font upload for PDF =====
 with st.sidebar:
+
+    if not os.path.exists("fonts/NanumGothic.ttf"):
+        st.warning("⚠️ 'fonts/NanumGothic.ttf' 파일이 없습니다. PDF 한글 출력을 위해 fonts/ 폴더에 넣어주세요.")
+
     st.markdown("### 🖨️ PDF 한글 폰트 설정")
     st.caption("PDF 글자 깨짐 방지를 위해 한글 폰트를 올리세요. (권장: *NanumGothic.ttf*, *NotoSansKR-Regular.otf*)")
     _font_file = st.file_uploader("폰트 파일(.ttf/.otf)", type=["ttf","otf"], key="font_upload")
@@ -846,6 +854,12 @@ if run:
                     try:
                         pdfmetrics.registerFont(TTFont(font_name, candidate))
                         font_registered = True
+                        # save chosen font path for UI display
+                        try:
+                            import streamlit as st
+                            st.session_state['__pdf_font_used'] = c
+                        except Exception:
+                            pass
                         break
                     except Exception:
                         pass
@@ -877,7 +891,11 @@ if run:
                 else:
                     p = Paragraph(escape(line), styles['BodyText'])
                 story.append(p)
-            doc.build(story)
+            \1
+
+            # Debug info: show which font was chosen
+            st.info(f"PDF 생성 시 사용한 폰트: {chosen if chosen else '기본 내장 폰트 (한글 미지원일 수 있음)'}")
+    
             return buf_pdf.getvalue()
 
         pdf_bytes = md_to_pdf_bytes(report_md)
@@ -928,5 +946,3 @@ else:
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
-
-
