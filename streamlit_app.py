@@ -498,7 +498,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     # Per-cancer default lists for hematologic malignancies
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide",
-                "Etoposide","Fludarabine","Hydroxyurea","MTX"],
+                "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA"],
         "APL": ["ATRA","ATO","Idarubicin","Daunorubicin","ARA-C","G-CSF"],
         "ALL": ["Vincristine","Asparaginase","Daunorubicin","Cyclophosphamide","MTX","ARA-C","Topotecan","Etoposide"],
         "CML": ["Imatinib","Dasatinib","Nilotinib","Hydroxyurea"],
