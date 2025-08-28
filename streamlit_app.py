@@ -439,7 +439,7 @@ extras = {}
 
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 선택 및 입력")
-    
+
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide",
                 "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF"],
@@ -493,8 +493,7 @@ drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
 
-    for d in selected_drugs:
-        
+for d in selected_drugs:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
             amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수", key=f"med_{d}", as_int=True, placeholder="예: 2")
