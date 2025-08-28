@@ -489,28 +489,31 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
     
-drug_search = st.text_input("🔍 항암제 검색", key="drug_search") or ""
-drug_choices = []
-for d in drug_list:
-    alias = str(ANTICANCER.get(d, {}).get("alias", ""))
-    if (drug_search == "" or drug_search.lower() in d.lower() or drug_search.lower() in alias.lower()):
-        drug_choices.append(d)
-selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
-for d in selected_drugs:
-        alias = ANTICANCER.get(d,{}).get("alias","")
-        if d == "ATRA":
-            amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수", key=f"med_{d}", as_int=True, placeholder="예: 2")
-        elif d == "ARA-C":
-            ara_form = st.selectbox(f"{d} ({alias}) - 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key=f"ara_form_{d}")
-            amt = num_input_generic(f"{d} ({alias}) - 용량/일", key=f"med_{d}", decimals=1, placeholder="예: 100")
-            if amt>0:
-                meds[d] = {"form": ara_form, "dose": amt}
-            continue
-        else:
-            amt = num_input_generic(f"{d} ({alias}) - 용량/알약", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
-        if amt and float(amt)>0:
-            meds[d] = {"dose_or_tabs": amt}
-
+    try:
+        _drug_iter = list(drug_list)
+    except NameError:
+        _drug_iter = []
+    drug_choices = []
+    for d in drug_list:
+        alias = str(ANTICANCER.get(d, {}).get("alias", ""))
+        if (drug_search == "" or drug_search.lower() in d.lower() or drug_search.lower() in alias.lower()):
+            drug_choices.append(d)
+    selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
+    for d in selected_drugs:
+            alias = ANTICANCER.get(d,{}).get("alias","")
+            if d == "ATRA":
+                amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수", key=f"med_{d}", as_int=True, placeholder="예: 2")
+            elif d == "ARA-C":
+                ara_form = st.selectbox(f"{d} ({alias}) - 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key=f"ara_form_{d}")
+                amt = num_input_generic(f"{d} ({alias}) - 용량/일", key=f"med_{d}", decimals=1, placeholder="예: 100")
+                if amt>0:
+                    meds[d] = {"form": ara_form, "dose": amt}
+                continue
+            else:
+                amt = num_input_generic(f"{d} ({alias}) - 용량/알약", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
+            if amt and float(amt)>0:
+                meds[d] = {"dose_or_tabs": amt}
+    
 # 항생제 드롭다운
 st.markdown("### 🧪 항생제 선택 및 입력")
 extras["abx"] = {}
