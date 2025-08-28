@@ -134,7 +134,7 @@ ANTICANCER = {
     "Regorafenib":{"alias":"레고라페닙(TKI)","aes":["손발증후군","고혈압"],"warn":["혈압/간기능"],"ix":[]},
     "Atezolizumab":{"alias":"아테졸리주맙(PD-L1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육"],"ix":[]},
 
-}}
+}
 
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
