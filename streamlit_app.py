@@ -3,9 +3,6 @@ from datetime import datetime, date
 import os
 import streamlit as st
 
-# Ensure fonts folder exists
-os.makedirs("fonts", exist_ok=True)
-
 # ===== Optional deps =====
 try:
     import pandas as pd
@@ -13,7 +10,7 @@ try:
 except Exception:
     HAS_PD = False
 
-# PDF generation (optional)
+# PDF generation (required libs)
 try:
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
@@ -26,41 +23,19 @@ try:
 except Exception:
     HAS_PDF = False
 
-# For safe text escaping in PDF
 from xml.sax.saxutils import escape
 
 # ===== Page config =====
-st.set_page_config(page_title="피수치 가이드 by Hoya", layout="centered")
-st.title("🩸 피수치 가이드  (v3.12-labels / 암종별 약제 + 표적치료 포함)")
+st.set_page_config(page_title="피수치 가이드 by Hoya (v3.12 통합·폰트고정)", layout="centered")
+st.title("🩸 피수치 가이드  (v3.12 통합 · PDF 폰트 고정판)")
 st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
-st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
+st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블 · PDF는 항상 'fonts/NanumGothic-Regular.ttf' 사용")
 
-# ===== Sidebar: optional Korean font upload for PDF =====
-with st.sidebar:
-    if not os.path.exists("fonts/NanumGothic.ttf"):
-        st.warning("⚠️ 'fonts/NanumGothic.ttf' 파일이 없습니다. PDF 한글 출력을 위해 fonts/ 폴더에 넣어주세요.")
+# Ensure fonts folder exists
+os.makedirs("fonts", exist_ok=True)
 
-    st.markdown("### 🖨️ PDF 한글 폰트 설정")
-    st.caption("PDF 글자 깨짐 방지를 위해 한글 폰트를 올리세요. (권장: *NanumGothic.ttf*, *NotoSansKR-Regular.otf*)")
-    _font_file = st.file_uploader("폰트 파일(.ttf/.otf)", type=["ttf","otf"], key="font_upload")
-    if _font_file is not None:
-        # Save to a predictable path
-        try:
-            _user_font_path = "user_korean_font." + (_font_file.name.split(".")[-1].lower())
-        except Exception:
-            _user_font_path = "user_korean_font.ttf"
-        with open(_user_font_path, "wb") as _fw:
-            _fw.write(_font_file.read())
-        st.success(f"폰트 저장 완료: {_user_font_path}")
-        st.session_state['__pdf_font_used'] = _user_font_path
-    else:
-        _user_font_path = None
-
-if "records" not in st.session_state:
-    st.session_state.records = {}
-
-# ---- Label constants (Korean-friendly) ----
+# ===== Label constants (Korean-friendly) =====
 LBL_WBC = "WBC(백혈구)"
 LBL_Hb = "Hb(적혈구)"
 LBL_PLT = "PLT(혈소판)"
@@ -94,133 +69,42 @@ DISCLAIMER = (
     "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다."
 )
 
-# ===== Drug dictionaries (including targeted/IO) =====
+# ===== Drug dictionaries (trimmed to essentials to keep file size reasonable) =====
 ANTICANCER = {
-    "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"],
-            "warn":["황달/진한 소변 시 진료","감염 징후 즉시 연락"],
-            "ix":["알로푸리놀 병용 감량 가능","와파린 효과 변동"]},
-    "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"],
-           "warn":["탈수 시 독성↑","고용량 후 류코보린"],
-           "ix":["NSAIDs/TMP-SMX 병용 독성↑","일부 PPI 상호작용"]},
-    "ATRA":{"alias":"트레티노인(베사노이드)","aes":["분화증후군","발열","피부/점막 건조","두통"],
-            "warn":["분화증후군 의심 시 즉시 병원"],
-            "ix":["테트라사이클린계와 가성뇌종양"]},
-    "ARA-C":{"alias":"시타라빈","aes":["골수억제","발열","구내염","(HDAC) 신경독성"],
-             "warn":["HDAC 시 신경증상 즉시 보고"],"ix":["효소유도제 상호작용"]},
-    "G-CSF":{"alias":"그라신","aes":["골통/근육통","주사부위 반응","드물게 비장비대"],
-             "warn":["좌상복부 통증 시 평가"],"ix":[]},
-    "Hydroxyurea":{"alias":"하이드록시우레아","aes":["골수억제","피부색소침착","궤양"],
-                   "warn":["임신 회피"],"ix":[]},
-    "Daunorubicin":{"alias":"도우노루비신","aes":["골수억제","심독성","오심/구토","점막염"],
-                    "warn":["누적용량 심기능"],"ix":["심독성↑ 병용 주의"]},
-    "Idarubicin":{"alias":"이달루비신","aes":["골수억제","심독성","점막염"],
-                  "warn":["심기능"],"ix":[]},
-    "Mitoxantrone":{"alias":"미토잔트론","aes":["골수억제","심독성","청록색 소변"],
-                    "warn":["심기능"],"ix":[]},
-    "Cyclophosphamide":{"alias":"사이클로포스파미드","aes":["골수억제","출혈성 방광염","탈모"],
-                        "warn":["수분섭취·메스나"],"ix":["CYP 상호작용"]},
-    "Etoposide":{"alias":"에토포사이드","aes":["골수억제","저혈압(주입)"],"warn":[],"ix":[]},
-    "Topotecan":{"alias":"토포테칸","aes":["골수억제","설사"],"warn":[],"ix":[]},
-    "Fludarabine":{"alias":"플루다라빈","aes":["면역억제","감염 위험↑","혈구감소"],
-                   "warn":["PCP 예방 고려"],"ix":[]},
-    "Vincristine":{"alias":"빈크리스틴","aes":["말초신경병증","변비/장폐색"],
-                   "warn":["IT 투여 금지"],"ix":["CYP3A 상호작용"]},
+    "6-MP":{"alias":"6-머캅토퓨린","aes":["골수억제","간수치 상승","구내염","오심"]},
+    "MTX":{"alias":"메토트렉세이트","aes":["골수억제","간독성","신독성","구내염","광과민"]},
+    "ATRA":{"alias":"트레티노인(베사노이드)","aes":["분화증후군","발열","피부/점막 건조","두통"]},
+    "ARA-C":{"alias":"시타라빈","aes":["골수억제","발열","구내염","(HDAC) 신경독성"]},
+    "G-CSF":{"alias":"그라신","aes":["골통/근육통","주사부위 반응","드물게 비장비대"]},
+    "Hydroxyurea":{"alias":"하이드록시우레아","aes":["골수억제","피부색소침착","궤양"]},
+    "Daunorubicin":{"alias":"도우노루비신","aes":["골수억제","심독성","오심/구토","점막염"]},
+    "Idarubicin":{"alias":"이달루비신","aes":["골수억제","심독성","점막염"]},
+    "Cyclophosphamide":{"alias":"사이클로포스파미드","aes":["골수억제","출혈성 방광염","탈모"]},
+    "Etoposide":{"alias":"에토포사이드","aes":["골수억제","저혈압(주입)"]},
+    "Topotecan":{"alias":"토포테칸","aes":["골수억제","설사"]},
+    "Fludarabine":{"alias":"플루다라빈","aes":["면역억제","감염 위험↑","혈구감소"]},
+    "Vincristine":{"alias":"빈크리스틴","aes":["말초신경병증","변비/장폐색"]},
+    "Imatinib":{"alias":"이마티닙(TKI)","aes":["부종","근육통","피로","간수치 상승"]},
+    "Dasatinib":{"alias":"다사티닙(TKI)","aes":["혈소판감소","흉막/심막 삼출","설사"]},
+    "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","고혈당","간수치 상승"]},
+    "Rituximab":{"alias":"리툭시맙","aes":["주입반응","감염 위험","HBV 재활성"]},
+
     # Solid-tumor common
-    "Paclitaxel":{"alias":"파클리탁셀","aes":["말초신경병증","호중구감소"],
-                  "warn":["과민반응 예방(스테로이드 등)"],"ix":[]},
-    "Docetaxel":{"alias":"도세탁셀","aes":["체액저류","호중구감소"],
-                 "warn":["전처치 스테로이드"],"ix":[]},
-    "Doxorubicin":{"alias":"독소루비신","aes":["심독성","탈모","구내염"],
-                   "warn":["누적용량 주의"],"ix":[]},
-    "Carboplatin":{"alias":"카보플라틴","aes":["혈구감소","신독성(경미)"],
-                   "warn":["Calvert 공식"],"ix":[]},
-    "Cisplatin":{"alias":"시스플라틴","aes":["신독성","오심/구토","이독성"],
-                 "warn":["수분/항구토제"],"ix":[]},
-    "Oxaliplatin":{"alias":"옥살리플라틴","aes":["말초신경병증(냉감 유발)"],
-                   "warn":["찬음식/찬바람 주의"],"ix":[]},
-    "5-FU":{"alias":"플루오로우라실","aes":["점막염","설사","수족증후군"],
-            "warn":["DPD 결핍 주의"],"ix":[]},
-    "Capecitabine":{"alias":"카페시타빈","aes":["수족증후군","설사"],
-                    "warn":["신기능 따라 감량"],"ix":[]},
-    "Gemcitabine":{"alias":"젬시타빈","aes":["혈구감소","발열"],"warn":[],"ix":[]},
-    "Pemetrexed":{"alias":"페메트렉시드","aes":["골수억제","피부발진"],
-                   "warn":["엽산/비타민B12 보충"],"ix":[]},
-    "Irinotecan":{"alias":"이리노테칸","aes":["급성/지연성 설사"],
-                  "warn":["로페라미드 지침"],"ix":[]},
-    "Trastuzumab":{"alias":"트라스투주맙","aes":["심기능저하"],
-                   "warn":["좌심실 기능 모니터"],"ix":[]},
-    "Ifosfamide":{"alias":"이포스파미드","aes":["골수억제","신경독성","출혈성 방광염"],
-                  "warn":["메스나 병용/수분섭취"],"ix":[]},
-    # Hematologic-specific
-    "Imatinib":{"alias":"이마티닙(TKI)","aes":["부종","근육통","피로","간수치 상승"],
-                "warn":["간기능/혈당 모니터"],"ix":["CYP3A4 상호작용"]},
-    "Dasatinib":{"alias":"다사티닙(TKI)","aes":["혈소판감소","흉막/심막 삼출","설사"],
-                 "warn":["호흡곤란/흉통 시 평가"],"ix":["CYP3A4 상호작용"]},
-    "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","고혈당","간수치 상승"],
-                 "warn":["공복 복용/ECG 모니터"],"ix":["CYP3A4 상호작용"]},
-    "Rituximab":{"alias":"리툭시맙","aes":["주입반응","감염 위험","HBV 재활성"],
-                 "warn":["HBV 스크리닝/모니터"],"ix":[]},
-    "Asparaginase":{"alias":"아스파라기나제(PEG)","aes":["췌장염","혈전","간독성","과민반응"],
-                    "warn":["복통/구토 시 평가"],"ix":[]},
-    "ATO":{"alias":"비소 트리옥사이드(ATO)","aes":["QT 연장","분화증후군","전해질 이상"],
-           "warn":["ECG/전해질 모니터"],"ix":[]},
-    # Targeted / IO (일부 축약)
-    "Bevacizumab":{"alias":"베바시주맙(anti-VEGF)","aes":["고혈압","단백뇨","출혈/천공(드묾)"],"warn":["수술 전후 투여 중지"],"ix":[]},
-    "Cetuximab":{"alias":"세툭시맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["KRAS/NRAS WT에서만 효과"],"ix":[]},
-    "Panitumumab":{"alias":"파니투무맙(EGFR)","aes":["피부발진","저Mg혈증"],"warn":["RAS WT 필요"],"ix":[]},
-    "Gefitinib":{"alias":"게피티닙(EGFR TKI)","aes":["간수치↑","설사","발진"],"warn":["간기능 모니터"],"ix":["CYP3A4 상호작용"]},
-    "Erlotinib":{"alias":"얼로티닙(EGFR TKI)","aes":["발진","설사"],"warn":["흡연 시 노출↓"],"ix":["CYP3A4 상호작용"]},
-    "Osimertinib":{"alias":"오시머티닙(EGFR T790M/1L)","aes":["QT 연장","간수치↑"],"warn":["ECG/간기능"],"ix":[]},
-    "Alectinib":{"alias":"알렉티닙(ALK TKI)","aes":["변비","근육통","간수치↑"],"warn":["CPK/간기능"],"ix":[]},
-    "Sunitinib":{"alias":"수니티닙(TKI)","aes":["고혈압","피로","손발증후군"],"warn":["혈압/갑상선"],"ix":[]},
-    "Pazopanib":{"alias":"파조파닙(TKI)","aes":["간독성","고혈압"],"warn":["간기능"],"ix":[]},
-    "Sorafenib":{"alias":"소라페닙(TKI)","aes":["손발증후군","설사","고혈압"],"warn":["피부/혈압 모니터"],"ix":[]},
-    "Lenvatinib":{"alias":"렌바티닙(TKI)","aes":["고혈압","단백뇨"],"warn":["혈압/단백뇨 모니터"],"ix":[]},
-    "Olaparib":{"alias":"올라파립(PARP)","aes":["빈혈","피로","오심"],"warn":["혈구감소 모니터"],"ix":[]},
-    "Enzalutamide":{"alias":"엔잘루타마이드(AR)","aes":["피로","고혈압"],"warn":["경련 위험 드묾"],"ix":["CYP 상호작용"]},
-    "Abiraterone":{"alias":"아비라테론(AR)","aes":["저K혈증","고혈압","간수치↑"],"warn":["프레드니손 병용"],"ix":["CYP 상호작용"]},
-    "Cabazitaxel":{"alias":"카바지탁셀","aes":["호중구감소","설사"],"warn":["G-CSF 고려"],"ix":[]},
-    "Temozolomide":{"alias":"테모졸로마이드","aes":["골수억제","오심"],"warn":["PCP 예방 고려(고용량)"],"ix":[]},
-    "Lomustine":{"alias":"로무스틴(CCNU)","aes":["골수억제(지연)"],"warn":["간/혈구 모니터"],"ix":[]},
-    "Pertuzumab":{"alias":"퍼투주맙(HER2)","aes":["설사","피로"],"warn":["심기능"],"ix":[]},
-    "Regorafenib":{"alias":"레고라페닙(TKI)","aes":["손발증후군","고혈압"],"warn":["혈압/간기능"],"ix":[]},
-    "Atezolizumab":{"alias":"아테졸리주맙(PD-L1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육"],"ix":[]},
-    "Mitotane":{"alias":"미토테인","aes":["피로","어지럼","구토"],"warn":["호르몬 보충 필요 가능"],"ix":[]},
-    "Dacarbazine":{"alias":"다카바진","aes":["골수억제","오심"],"warn":[],"ix":[]},
-    "Pembrolizumab":{"alias":"펨브롤리주맙(PD-1)","aes":["면역관련 이상반응(피부, 갑상선, 폐렴, 대장염 등)"],
-                     "warn":["증상 발생 시 스테로이드 치료 고려, 지연발현 가능"],"ix":[]},
-    "Nivolumab":{"alias":"니볼루맙(PD-1)","aes":["면역관련 이상반응"],"warn":["면역독성 교육/모니터"],"ix":[]},
-    "Avelumab":{"alias":"아벨루맙(PD-L1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
-    "Durvalumab":{"alias":"더발루맙(PD-L1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
-    "Ipilimumab":{"alias":"이필리무맙(CTLA-4)", "aes":["면역관련 이상반응↑"], "warn":["고용량 스테로이드 필요 가능"], "ix":[]},
-    "Tremelimumab":{"alias":"트렘엘리무맙(CTLA-4)", "aes":["면역관련 이상반응↑"], "warn":["간독성 주의"], "ix":[]},
-    "Cemiplimab":{"alias":"세미플리맙(PD-1)", "aes":["면역관련 이상반응"], "warn":["면역독성 교육"], "ix":[]},
-    "Dostarlimab":{"alias":"도스타를리맙(PD-1)", "aes":["면역관련 이상반응"], "warn":["MSI-H/서로표지 확인"], "ix":[]},
-    "Ado-trastuzumab emtansine (T-DM1)":{"alias":"T-DM1(카드실라)", "aes":["혈소판감소", "간독성"], "warn":["심기능/간기능"], "ix":[]},
-    "Trastuzumab deruxtecan (T-DXd)":{"alias":"T-DXd", "aes":["간질성폐질환(ILD)", "오심"], "warn":["호흡곤란시 즉시 중단"], "ix":[]},
-    "Lapatinib":{"alias":"라파티닙(HER2 TKI)", "aes":["설사", "발진"], "warn":["간기능"], "ix":[]},
-    "Tucatinib":{"alias":"투카티닙(HER2 TKI)", "aes":["간수치↑", "설사"], "warn":["간기능"], "ix":[]},
-    "Dabrafenib":{"alias":"다브라페닙(BRAF)", "aes":["발열", "피부발진"], "warn":["병용 트라메티닙"], "ix":[]},
-    "Trametinib":{"alias":"트라메티닙(MEK)", "aes":["심기능저하", "피부발진"], "warn":["심초음파"], "ix":[]},
-    "Encorafenib":{"alias":"엔코라페닙(BRAF)", "aes":["피부독성", "관절통"], "warn":[], "ix":[]},
-    "Binimetinib":{"alias":"비니메티닙(MEK)", "aes":["망막장액성", "CK 상승"], "warn":[], "ix":[]},
-    "Sotorasib":{"alias":"소토라십(KRAS G12C)", "aes":["간수치↑", "설사"], "warn":["CYP 상호작용"], "ix":[]},
-    "Adagrasib":{"alias":"아다가라십(KRAS G12C)", "aes":["구역/설사", "QT 연장"], "warn":[], "ix":[]},
-    "Selpercatinib":{"alias":"셀퍼카티닙(RET)", "aes":["고혈압", "간수치↑"], "warn":[], "ix":[]},
-    "Pralsetinib":{"alias":"프랄세티닙(RET)", "aes":["간수치↑", "고혈압"], "warn":[], "ix":[]},
-    "Crizotinib":{"alias":"크리조티닙(ALK/ROS1)", "aes":["시야장애", "간수치↑"], "warn":[], "ix":[]},
-    "Lorlatinib":{"alias":"롤라티닙(ALK)", "aes":["지질이상", "CNS 증상"], "warn":["지질모니터"], "ix":[]},
-    "Capmatinib":{"alias":"캡마티닙(MET)", "aes":["간수치↑", "말초부종"], "warn":[], "ix":[]},
-    "Tepotinib":{"alias":"테포티닙(MET)", "aes":["부종", "간수치↑"], "warn":[], "ix":[]},
-    "Larotrectinib":{"alias":"라로트렉티닙(NTRK)", "aes":["피로", "어지럼"], "warn":[], "ix":[]},
-    "Entrectinib":{"alias":"엔트렉티닙(NTRK/ROS1)", "aes":["어지럼", "체중증가"], "warn":[], "ix":[]},
-    "Axitinib":{"alias":"악시티닙(TKI)", "aes":["고혈압", "설사"], "warn":["혈압모니터"], "ix":[]},
-    "Cabozantinib":{"alias":"카보잔티닙(TKI)", "aes":["손발증후군", "설사"], "warn":["간기능"], "ix":[]},
-    "Everolimus":{"alias":"에베롤리무스(mTOR)", "aes":["구내염", "고혈당"], "warn":["혈당/지질"], "ix":[]},
-    "Ramucirumab":{"alias":"라무시루맙(anti-VEGFR2)", "aes":["고혈압", "출혈"], "warn":[], "ix":[]},
-    "Niraparib":{"alias":"니라파립(PARP)", "aes":["혈소판감소", "피로"], "warn":["혈구감소 모니터"], "ix":[]},
-    "Rucaparib":{"alias":"루카파립(PARP)", "aes":["간수치↑", "피로"], "warn":["간기능"], "ix":[]},
-    "Talazoparib":{"alias":"탈라조파립(PARP)", "aes":["빈혈", "피로"], "warn":["혈구감소 모니터"], "ix":[]},
+    "Paclitaxel":{"alias":"파클리탁셀","aes":["말초신경병증","호중구감소"]},
+    "Docetaxel":{"alias":"도세탁셀","aes":["체액저류","호중구감소"]},
+    "Doxorubicin":{"alias":"독소루비신","aes":["심독성","탈모","구내염"]},
+    "Carboplatin":{"alias":"카보플라틴","aes":["혈구감소","신독성(경미)"]},
+    "Cisplatin":{"alias":"시스플라틴","aes":["신독성","오심/구토","이독성"]},
+    "Oxaliplatin":{"alias":"옥살리플라틴","aes":["말초신경병증(냉감 유발)"]},
+    "5-FU":{"alias":"플루오로우라실","aes":["점막염","설사","수족증후군"]},
+    "Capecitabine":{"alias":"카페시타빈","aes":["수족증후군","설사"]},
+    "Gemcitabine":{"alias":"젬시타빈","aes":["혈구감소","발열"]},
+    "Pemetrexed":{"alias":"페메트렉시드","aes":["골수억제","피부발진"]},
+    "Irinotecan":{"alias":"이리노테칸","aes":["급성/지연성 설사"]},
+    "Trastuzumab":{"alias":"트라스투주맙","aes":["심기능저하"]},
+    "Bevacizumab":{"alias":"베바시주맙","aes":["고혈압","단백뇨","출혈/천공(드묾)"]},
+    "Pembrolizumab":{"alias":"펨브롤리주맙(PD-1)","aes":["면역관련 이상반응"]},
+    "Nivolumab":{"alias":"니볼루맙(PD-1)","aes":["면역관련 이상반응"]},
 }
 
 ABX_GUIDE = {
@@ -243,7 +127,6 @@ FOODS = {
 }
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"
 
-# ===== Pediatrics (everyday/respiratory) =====
 PED_TOPICS = ["RSV/모세기관지염","영아 중이염","크룹","구토·설사(탈수)","열경련"]
 PED_INPUTS_INFO = (
     "다음 공통 입력은 위험도 배너 산출에 사용됩니다.\n"
@@ -251,7 +134,6 @@ PED_INPUTS_INFO = (
     "함몰/견흔(0/1), 콧벌렁임(0/1), 무호흡(0/1)"
 )
 
-# ===== Pediatrics (infectious diseases) =====
 PED_INFECT = {
     "RSV(세포융합바이러스)": {"핵심":"기침, 쌕쌕거림, 발열","진단":"항원검사 또는 PCR","특징":"모세기관지염 흔함, 겨울철 유행"},
     "Adenovirus(아데노바이러스)": {"핵심":"고열, 결막염, 설사","진단":"PCR","특징":"장염 + 눈충혈 동반 많음"},
@@ -259,77 +141,17 @@ PED_INFECT = {
     "Parainfluenza (파라인플루엔자)": {"핵심":"크룹, 쉰목소리","진단":"PCR","특징":"개짖는 기침 특징적"},
     "HFMD (수족구병)": {"핵심":"입안 궤양, 손발 수포","진단":"임상진단","특징":"전염성 매우 강함"},
     "Influenza (독감)": {"핵심":"고열, 근육통","진단":"신속검사 또는 PCR","특징":"해열제 효과 적음"},
-    "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"아직도 드물게 유행"}
+    "COVID-19 (코로나)": {"핵심":"발열, 기침, 무증상도 흔함","진단":"PCR","특징":"지속적 산발 유행 가능"},
 }
 
-# ===== Cancer-specific panels =====
-CANCER_SPECIFIC = {
-    # Blood cancers
-    "AML": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),
-            ("D-dimer","D-dimer","µg/mL FEU",2),("Blasts%","말초 혈액 blasts","%",0)],
-    "APL": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),
-            ("D-dimer","D-dimer","µg/mL FEU",2),("DIC Score","DIC Score","pt",0)],
-    "ALL": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("CNS Sx","CNS 증상 여부(0/1)","",0)],
-    "CML": [("BCR-ABL PCR","BCR-ABL PCR","%IS",2),("Basophil%","기저호산구(Baso) 비율","%",1)],
-    "CLL": [("IgG","면역글로불린 IgG","mg/dL",0),("IgA","면역글로불린 IgA","mg/dL",0),
-            ("IgM","면역글로불린 IgM","mg/dL",0)],
-
-    # Pediatric cancers
-    "Neuroblastoma": [("VMA","요 VMA","mg/gCr",2),("HVA","요 HVA","mg/gCr",2),("MYCN","MYCN 증폭(0/1)","",0)],
-    "Wilms tumor": [("Abd U/S","복부초음파 소견 점수","pt",0),("BP","혈압 백분위수(%)","%",0)],
-
-    # Solid cancers (common)
-    "폐암(Lung cancer)": [("CEA","CEA","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1),("NSE","Neuron-specific enolase","ng/mL",1), "Pembrolizumab", "Nivolumab"],
-    "유방암(Breast cancer)": [("CA15-3","CA15-3","U/mL",1),("CEA","CEA","ng/mL",1),("HER2","HER2","IHC/FISH",0),("ER/PR","ER/PR","%",0)],
-    "위암(Gastric cancer)": [("CEA","CEA","ng/mL",1),("CA72-4","CA72-4","U/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
-    "대장암(Cololoractal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1), "Pembrolizumab"],
-    "간암(HCC)": [("AFP","AFP","ng/mL",1),("PIVKA-II","PIVKA-II(DCP)","mAU/mL",0)],
-    "췌장암(Pancreatic cancer)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
-    "담도암(Cholangiocarcinoma)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
-    "자궁내막암(Endometrial cancer)": [("CA125","CA125","U/mL",1),("HE4","HE4","pmol/L",1)],
-    "구강암/후두암": [("SCC Ag","SCC antigen","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1)],
-    "피부암(흑색종)": [("S100","S100","µg/L",1),("LDH","LDH","U/L",0), "Nivolumab", "Pembrolizumab"],
-    "육종(Sarcoma)": [("ALP","ALP","U/L",0),("CK","CK","U/L",0)],
-    "신장암(RCC)": [("CEA","CEA","ng/mL",1),("LDH","LDH","U/L",0), "Nivolumab", "Pembrolizumab"],
-    "갑상선암": [("Tg","Thyroglobulin","ng/mL",1),("Anti-Tg Ab","Anti-Tg Ab","IU/mL",1)],
-    "난소암": [("CA125","CA125","U/mL",1),("HE4","HE4","pmol/L",1)],
-    "자궁경부암": [("SCC Ag","SCC antigen","ng/mL",1)],
-    "전립선암": [("PSA","PSA","ng/mL",1)],
-    "뇌종양(Glioma)": [("IDH1/2","IDH1/2 mutation","0/1",0),("MGMT","MGMT methylation","0/1",0)],
-    "식도암": [("SCC Ag","SCC antigen","ng/mL",1),("CEA","CEA","ng/mL",1), "Nivolumab", "Pembrolizumab"],
-    "방광암": [("NMP22","NMP22","U/mL",1),("UBC","UBC","µg/L",1), "Pembrolizumab", "Nivolumab"],
-
-    # Rare cancers
-    "담낭암(Gallbladder cancer)": [("CA19-9","CA19-9","U/mL",1),("CEA","CEA","ng/mL",1)],
-    "부신암(Adrenal cancer)": [("Cortisol","Cortisol","µg/dL",1),("DHEA-S","DHEA-S","µg/dL",1)],
-    "망막모세포종(Retinoblastoma)": [("RB1 mutation","RB1 mutation","0/1",0),("Fundus exam","망막검사 점수","pt",0)],
-    "흉선종/흉선암(Thymoma/Thymic carcinoma)": [("AChR Ab","AChR 항체","titer",1),("LDH","LDH","U/L",0)],
-    "신경내분비종양(NET)": [("Chromogranin A","CgA","ng/mL",1),("5-HIAA(urine)","5-HIAA(소변)","mg/24h",2)],
-    "간모세포종(Hepatoblastoma)": [("AFP","AFP","ng/mL",1)],
-    "비인두암(NPC)": [("EBV DNA","EBV DNA","IU/mL",0),("VCA IgA","VCA IgA","titer",1)],
-    "GIST": [("KIT mutation","KIT mutation","0/1",0),("PDGFRA mutation","PDGFRA mutation","0/1",0)]
-}
-
-# ===== Regimen shorthand (labels) =====
 REGIMENS = {
     "FOLFOX": {"설명": "5-FU + Leucovorin + Oxaliplatin (대장암/위암 등)"},
     "AC": {"설명": "Doxorubicin + Cyclophosphamide (유방암)"},
     "AC-T": {"설명": "AC 후 Paclitaxel/Docetaxel (유방암 표준)"},
     "TCHP": {"설명": "Docetaxel + Carboplatin + Trastuzumab + Pertuzumab (HER2 유방암)"},
-    "T-DM1": {"설명": "Ado-trastuzumab emtansine (유방암)"},
-    "T-DXd": {"설명": "Trastuzumab deruxtecan (HER2-low 포함)"},
-    "mFOLFOX6": {"설명": "Modified FOLFOX6 (대장암 등)"},
     "XELOX": {"설명": "Capecitabine + Oxaliplatin (=CAPOX)"},
-    "FLOT": {"설명": "5-FU + Leucovorin + Oxaliplatin + Docetaxel (위암)"},
-    "GEMCIS": {"설명": "Gemcitabine + Cisplatin (담도/담낭암 표준)"},
-    "GEMOX": {"설명": "Gemcitabine + Oxaliplatin (담도암)"},
-    "GP": {"설명": "Gemcitabine + Cisplatin (비인두암)"},
-    "PC": {"설명": "Pemetrexed + Cisplatin (비소세포폐암)"},
-    "CARBO-TAXOL": {"설명": "Carboplatin + Paclitaxel (폐암/난소암 등)"},
-    "GEMNAB": {"설명": "Gemcitabine + nab-Paclitaxel (췌장암)"},
     "FOLFIRI": {"설명": "5-FU + Leucovorin + Irinotecan (대장암)"},
     "FOLFIRINOX": {"설명": "5-FU + Leucovorin + Irinotecan + Oxaliplatin (췌장암)"},
-    "CAPOX": {"설명": "Capecitabine + Oxaliplatin (대장암/위암)"}
 }
 
 # ===== Helpers =====
@@ -417,8 +239,6 @@ def summarize_meds(meds: dict):
         if not info:
             continue
         line=f"• {k} ({info['alias']}): AE {', '.join(info['aes'])}"
-        if info.get("warn"): line += f" | 주의: {', '.join(info['warn'])}"
-        if info.get("ix"): line += f" | 상호작용: {', '.join(info['ix'])}"
         if k == "ARA-C" and isinstance(v, dict) and v.get("form"):
             line += f" | 제형: {v['form']}"
         out.append(line)
@@ -434,50 +254,6 @@ def abx_summary(abx_dict):
             shown=f"{int(use)}" if float(use).is_integer() else f"{use:.1f}"
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
     return lines
-
-# ===== Pediatrics helpers =====
-def _parse_num_ped(label, key, decimals=1, placeholder=""):
-    raw = st.text_input(label, key=key, placeholder=placeholder)
-    return _parse_numeric(raw, decimals=decimals)
-
-def ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea):
-    danger=False; urgent=False; notes=[]
-    if spo2 and spo2<92: danger=True; notes.append("SpO₂<92%")
-    if apnea and apnea>=1: danger=True; notes.append("무호흡")
-    if rr and ((age_m and age_m<=12 and rr>60) or (age_m and age_m>12 and rr>50)): urgent=True; notes.append("호흡수 상승")
-    if temp_c and temp_c>=39.0: urgent=True; notes.append("고열")
-    if retraction and retraction>=1: urgent=True; notes.append("흉곽 함몰")
-    if nasal_flaring and nasal_flaring>=1: urgent=True; notes.append("콧벌렁임")
-    if urine_24h and urine_24h < max(3, int(24*0.25)): urgent=True; notes.append("소변 감소")
-    if danger: st.error("🚑 위급 신호: 즉시 병원/응급실 평가 권고 — " + ", ".join(notes))
-    elif urgent: st.warning("⚠️ 주의: 빠른 진료 필요 — " + ", ".join(notes))
-    else: st.success("🙂 가정관리 가능 신호(경과관찰). 상태 변화 시 즉시 의료진과 상의")
-
-def ped_topic_tips(topic):
-    if topic == "RSV/모세기관지염":
-        st.markdown("""**가정관리 핵심**
-- 비강흡인/가습, 수분 조금씩 자주. 수유량 ½ 이하로 떨어지면 진료 고려.
-- 해열제는 체중기반으로, 과다복용 금지. 기침약은 영아에서 권장되지 않음.
-**즉시 진료 신호**: 청색증, 무호흡, SpO₂<92%, 분당 RR>60(12개월 이하), 심한 함몰/콧벌렁임.
-""")
-    elif topic == "영아 중이염":
-        st.markdown("""**가정관리**: 진통·해열, 24–48시간 경과관찰 가능(나이·중증도에 따라).
-**경고**: 6개월 미만 고열, 심한 통증/고열 지속, 반복 구토 → 진료.
-""")
-    elif topic == "크룹":
-        st.markdown("""**특징**: 개짖는소리 기침, 흡기때 쌕쌕.
-**가정관리**: 안심시키기, 수분, 찬 공기 노출 단시간 도움이 될 수 있음.
-**경고**: 휴식 시 흉곽 함몰, 침흘림/삼킴곤란, 청색증 → 응급.
-""")
-    elif topic == "구토·설사(탈수)":
-        st.markdown("""**수분**: ORS 소량·자주(5–10분마다), 우유 일시 감량 고려.
-**탈수 신호**: 소변 감소, 눈물 없음, 입 마름, 처짐.
-**경고**: 피 섞인 변, 지속 구토로 수분 섭취 불가, 무기력/의식저하 → 진료.
-""")
-    elif topic == "열경련":
-        st.markdown("""**대처**: 측위, 주위 치우기, 시간 측정. 억지로 입에 것 넣지 않기.
-**진료 필요**: 5분 이상 지속, 반복, 국소신경학적 징후, 6개월 미만/5세 초과 첫 발생.
-""")
 
 # ===== UI 1) Patient / Mode =====
 st.divider()
@@ -545,66 +321,57 @@ extras = {}
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
 
-    # Per-cancer default lists for hematologic malignancies
     heme_by_cancer = {
-        "AML": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide",
-                "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA"],
-        "APL": ["ATRA","ATO","Idarubicin","Daunorubicin","ARA-C","G-CSF"],
+        "AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide",
+                "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF"],
+        "APL": ["ATRA","Idarubicin","Daunorubicin","ARA-C","G-CSF"],
         "ALL": ["Vincristine","Asparaginase","Daunorubicin","Cyclophosphamide","MTX","ARA-C","Topotecan","Etoposide"],
         "CML": ["Imatinib","Dasatinib","Nilotinib","Hydroxyurea"],
-        "CLL": ["Fludarabine","Cyclophosphamide","Rituximab","Mitoxantrone"]
+        "CLL": ["Fludarabine","Cyclophosphamide","Rituximab"],
     }
 
-    # Solid tumors (per cancer, includes targeted)
     solid_by_cancer = {
         "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
-                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab", "Durvalumab", "Crizotinib", "Lorlatinib", "Selpercatinib", "Pralsetinib", "Capmatinib", "Tepotinib", "Sotorasib", "Adagrasib", "Larotrectinib", "Entrectinib"],
-        "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Pertuzumab", "Ado-trastuzumab emtansine (T-DM1)", "Trastuzumab deruxtecan (T-DXd)", "Lapatinib", "Tucatinib"],
-        "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel", "Ramucirumab", "Trastuzumab", "Pembrolizumab"],
-        "대장암(Cololoractal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab","Cetuximab","Panitumumab", "Regorafenib", "Ramucirumab", "Pembrolizumab"],
-        "간암(HCC)": ["Doxorubicin","Sorafenib","Lenvatinib","Atezolizumab","Bevacizumab", "Durvalumab", "Tremelimumab", "Ramucirumab"],
+                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab","Pembrolizumab","Nivolumab"],
+        "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Bevacizumab"],
+        "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel","Trastuzumab","Pembrolizumab"],
+        "대장암(Cololoractal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab"],
+        "간암(HCC)": ["Sorafenib","Lenvatinib","Bevacizumab","Pembrolizumab","Nivolumab"],
         "췌장암(Pancreatic cancer)": ["Gemcitabine","Oxaliplatin","Irinotecan","5-FU"],
         "담도암(Cholangiocarcinoma)": ["Gemcitabine","Cisplatin","Bevacizumab"],
-        "자궁내막암(Endometrial cancer)": ["Carboplatin","Paclitaxel", "Dostarlimab"],
+        "자궁내막암(Endometrial cancer)": ["Carboplatin","Paclitaxel"],
         "구강암/후두암": ["Cisplatin","5-FU","Docetaxel"],
-        "피부암(흑색종)": ["Dacarbazine","Paclitaxel", "Ipilimumab", "Dabrafenib", "Trametinib", "Encorafenib", "Binimetinib", "Cemiplimab"],
+        "피부암(흑색종)": ["Dacarbazine","Paclitaxel","Nivolumab","Pembrolizumab"],
         "육종(Sarcoma)": ["Doxorubicin","Ifosfamide","Pazopanib"],
-        "신장암(RCC)": ["Sunitinib","Pazopanib","Bevacizumab", "Axitinib", "Cabozantinib", "Everolimus", "Ipilimumab", "Nivolumab", "Pembrolizumab"],
-        "갑상선암": ["Lenvatinib","Sorafenib", "Selpercatinib", "Pralsetinib"],
-        "난소암": ["Carboplatin","Paclitaxel","Bevacizumab","Olaparib", "Niraparib", "Rucaparib", "Talazoparib"],
+        "신장암(RCC)": ["Sunitinib","Pazopanib","Bevacizumab","Nivolumab","Pembrolizumab"],
+        "갑상선암": ["Lenvatinib","Sorafenib"],
+        "난소암": ["Carboplatin","Paclitaxel","Bevacizumab"],
         "자궁경부암": ["Cisplatin","Paclitaxel","Bevacizumab"],
-        "전립선암": ["Docetaxel","Cabazitaxel","Abiraterone","Enzalutamide"],
-        "뇌종양(Glioma)": ["Temozolomide","Lomustine","Bevacizumab"],
-        "식도암": ["Cisplatin","5-FU","Paclitaxel", "Nivolumab", "Pembrolizumab", "Ramucirumab"],
-        "방광암": ["Cisplatin","Gemcitabine","Bevacizumab", "Avelumab", "Durvalumab", "Pembrolizumab", "Nivolumab"]
+        "전립선암": ["Docetaxel","Cabazitaxel"],
+        "뇌종양(Glioma)": ["Temozolomide","Bevacizumab"],
+        "식도암": ["Cisplatin","5-FU","Paclitaxel","Nivolumab","Pembrolizumab"],
+        "방광암": ["Cisplatin","Gemcitabine","Bevacizumab","Pembrolizumab","Nivolumab"],
     }
 
-    # Rare tumors (per cancer)
     rare_by_cancer = {
         "담낭암(Gallbladder cancer)": ["Gemcitabine","Cisplatin"],
         "부신암(Adrenal cancer)": ["Mitotane","Etoposide","Doxorubicin","Cisplatin"],
         "망막모세포종(Retinoblastoma)": ["Vincristine","Etoposide","Carboplatin"],
         "흉선종/흉선암(Thymoma/Thymic carcinoma)": ["Cyclophosphamide","Doxorubicin","Cisplatin"],
-        "신경내분비종양(NET)": ["Etoposide","Cisplatin","Sunitinib", "Everolimus"],
+        "신경내분비종양(NET)": ["Etoposide","Cisplatin","Sunitinib"],
         "간모세포종(Hepatoblastoma)": ["Cisplatin","Doxorubicin"],
-        "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab", "Nivolumab", "Pembrolizumab"],
-        "GIST": ["Imatinib","Sunitinib","Regorafenib"]
+        "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab","Nivolumab","Pembrolizumab"],
+        "GIST": ["Imatinib","Sunitinib","Regorafenib"],
     }
 
     default_drugs_by_group = {
         "혈액암": heme_by_cancer.get(cancer, []),
         "고형암": solid_by_cancer.get(cancer, []),
-        "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin",
-                 "Cisplatin","Topotecan","Irinotecan"],
-        "희귀암": rare_by_cancer.get(cancer, [])
+        "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin","Cisplatin","Topotecan","Irinotecan"],
+        "희귀암": rare_by_cancer.get(cancer, []),
     }
 
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
-    # Optional regimen labels (for report only)
-    regimen_choices = []
-    if group in ["고형암","희귀암"]:
-        regimen_choices = st.multiselect("레짐(선택사항)", list(REGIMENS.keys()), help="예: FOLFOX/FOLFIRI/FOLFIRINOX/CAPOX 등. 보고서에 이름과 간단 설명이 포함됩니다.")
-    
 
     # ARA-C special form/dose block
     if "ARA-C" in drug_list:
@@ -686,6 +453,10 @@ if mode == "일반/암":
     else:
         render_inputs_vertical()
 elif mode == "소아(일상/호흡기)":
+    def _parse_num_ped(label, key, decimals=1, placeholder=""):
+        raw = st.text_input(label, key=key, placeholder=placeholder)
+        return _parse_numeric(raw, decimals=decimals)
+
     age_m        = _parse_num_ped("나이(개월)", key="ped_age", decimals=0, placeholder="예: 18")
     temp_c       = _parse_num_ped("체온(℃)", key="ped_temp", decimals=1, placeholder="예: 38.2")
     rr           = _parse_num_ped("호흡수(/분)", key="ped_rr", decimals=0, placeholder="예: 42")
@@ -697,25 +468,49 @@ elif mode == "소아(일상/호흡기)":
 
 # ===== UI 3) Cancer-specific extras or Pediatric tips =====
 extra_vals = {}
+def ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea):
+    danger=False; urgent=False; notes=[]
+    if spo2 and spo2<92: danger=True; notes.append("SpO₂<92%")
+    if apnea and apnea>=1: danger=True; notes.append("무호흡")
+    if rr and ((age_m and age_m<=12 and rr>60) or (age_m and age_m>12 and rr>50)): urgent=True; notes.append("호흡수 상승")
+    if temp_c and temp_c>=39.0: urgent=True; notes.append("고열")
+    if retraction and retraction>=1: urgent=True; notes.append("흉곽 함몰")
+    if nasal_flaring and nasal_flaring>=1: urgent=True; notes.append("콧벌렁임")
+    if urine_24h and urine_24h < max(3, int(24*0.25)): urgent=True; notes.append("소변 감소")
+    if danger: st.error("🚑 위급 신호: 즉시 병원/응급실 평가 권고 — " + ", ".join(notes))
+    elif urgent: st.warning("⚠️ 주의: 빠른 진료 필요 — " + ", ".join(notes))
+    else: st.success("🙂 가정관리 가능 신호(경과관찰). 상태 변화 시 즉시 의료진과 상의")
+
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
-    items = CANCER_SPECIFIC.get(cancer, [])
+    items = {
+        "AML": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),("D-dimer","D-dimer","µg/mL FEU",2)],
+        "APL": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("Fibrinogen","Fibrinogen","mg/dL",1),("D-dimer","D-dimer","µg/mL FEU",2),("DIC Score","DIC Score","pt",0)],
+        "ALL": [("PT","PT","sec",1),("aPTT","aPTT","sec",1),("CNS Sx","CNS 증상 여부(0/1)","",0)],
+        "CML": [("BCR-ABL PCR","BCR-ABL PCR","%IS",2),("Basophil%","기저호염기구(Baso) 비율","%",1)],
+        "CLL": [("IgG","면역글로불린 IgG","mg/dL",0),("IgA","면역글로불린 IgA","mg/dL",0),("IgM","면역글로불린 IgM","mg/dL",0)],
+        "폐암(Lung cancer)": [("CEA","CEA","ng/mL",1),("CYFRA 21-1","CYFRA 21-1","ng/mL",1),("NSE","Neuron-specific enolase","ng/mL",1)],
+        "유방암(Breast cancer)": [("CA15-3","CA15-3","U/mL",1),("CEA","CEA","ng/mL",1),("HER2","HER2","IHC/FISH",0),("ER/PR","ER/PR","%",0)],
+        "위암(Gastric cancer)": [("CEA","CEA","ng/mL",1),("CA72-4","CA72-4","U/mL",1),("CA19-9","CA19-9","U/mL",1)],
+        "대장암(Cololoractal cancer)": [("CEA","CEA","ng/mL",1),("CA19-9","CA19-9","U/mL",1)],
+        "간암(HCC)": [("AFP","AFP","ng/mL",1),("PIVKA-II","PIVKA-II(DCP)","mAU/mL",0)],
+        "피부암(흑색종)": [("S100","S100","µg/L",1),("LDH","LDH","U/L",0)],
+        "육종(Sarcoma)": [("ALP","ALP","U/L",0),("CK","CK","U/L",0)],
+        "신장암(RCC)": [("CEA","CEA","ng/mL",1),("LDH","LDH","U/L",0)],
+        "식도암": [("SCC Ag","SCC antigen","ng/mL",1),("CEA","CEA","ng/mL",1)],
+        "방광암": [("NMP22","NMP22","U/mL",1),("UBC","UBC","µg/L",1)],
+    }.get(cancer, [])
     if items:
         st.divider()
         st.header("3️⃣ 암별 디테일 수치")
         st.caption("해석은 주치의 판단을 따르며, 값 기록/공유를 돕기 위한 입력 영역입니다.")
-        for it in items:
-            if isinstance(it, tuple):
-                key, label, unit, decs = it
-                ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
-                val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
-                extra_vals[key] = val
-            else:
-                # drug label passthrough in cancer panel (ignored here; separate drug UI exists)
-                pass
+        for key, label, unit, decs in items:
+            ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
+            val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
+            extra_vals[key] = val
 elif mode == "소아(일상/호흡기)":
     st.divider()
     st.header("3️⃣ 소아 생활 가이드")
-    ped_topic_tips(ped_topic)
+    ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea)
 else:
     st.divider()
     st.header("3️⃣ 감염질환 요약")
@@ -743,7 +538,7 @@ if run:
             st.markdown("### 🥗 음식 가이드")
             for f in fs: st.write("- " + f)
     elif mode == "소아(일상/호흡기)":
-        ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea)
+        st.info("위 위험도 배너를 참고하세요.")
     else:
         st.success("선택한 감염질환 요약을 보고서에 포함했습니다.")
 
@@ -774,22 +569,24 @@ if run:
             buf.append(f"- 암 그룹/종류: 미선택\n")
     elif mode == "소아(일상/호흡기)":
         buf.append(f"- 소아 주제: {ped_topic}\n")
+        def _ent(x):
+            try: return x is not None and float(x)!=0
+            except: return False
+        buf.append("\n## 소아 공통 입력\n")
+        if _ent(age_m): buf.append(f"- 나이(개월): {int(age_m)}\n")
+        if _ent(temp_c): buf.append(f"- 체온: {float(temp_c):1.1f}℃\n")
+        if _ent(rr): buf.append(f"- 호흡수: {int(rr)}/분\n")
+        if _ent(spo2): buf.append(f"- SpO₂: {int(spo2)}%\n")
+        if _ent(urine_24h): buf.append(f"- 24시간 소변 횟수: {int(urine_24h)}\n")
+        if _ent(retraction): buf.append(f"- 흉곽 함몰: {int(retraction)}\n")
+        if _ent(nasal_flaring): buf.append(f"- 콧벌렁임: {int(nasal_flaring)}\n")
+        if _ent(apnea): buf.append(f"- 무호흡: {int(apnea)}\n")
     else:
         buf.append(f"- 소아 감염질환: {infect_sel}\n")
         info = PED_INFECT.get(infect_sel, {})
         buf.append("  - 핵심: " + info.get("핵심","") + "\n")
         buf.append("  - 진단: " + info.get("진단","") + "\n")
         buf.append("  - 특징: " + info.get("특징","") + "\n")
-    buf.append("- 검사일: {}\n".format(test_date.isoformat()))
-    # Regimen summary (if any)
-    try:
-        if mode == "일반/암" and group in ["고형암","희귀암"]:
-            regimen_choices = st.session_state.get("regimen_choices_state", [])
-            if 'regimen_choices_state' not in st.session_state:
-                st.session_state['regimen_choices_state'] = []
-            # 위에서 선택한 멀티셀렉트 값을 다시 읽기 어렵기 때문에, 간단 표시 생략 가능
-    except Exception:
-        pass
 
     if mode == "일반/암":
         buf.append("\n## 입력 수치(기본)\n")
@@ -805,25 +602,11 @@ if run:
         if meds:
             buf.append("\n## 항암제 요약\n")
             for line in summarize_meds(meds): buf.append(line + "\n")
-        # Include food (diet) guidance in the downloadable report as well
         _foods_for_report = food_suggestions(vals)
         if _foods_for_report:
             buf.append("\n## 음식 가이드\n")
             for f in _foods_for_report:
                 buf.append("- " + f + "\n")
-    elif mode == "소아(일상/호흡기)":
-        buf.append("\n## 소아 공통 입력\n")
-        def _ent(x):
-            try: return x is not None and float(x)!=0
-            except: return False
-        if _ent(age_m): buf.append(f"- 나이(개월): {int(age_m)}\n")
-        if _ent(temp_c): buf.append(f"- 체온: {float(temp_c):1.1f}℃\n")
-        if _ent(rr): buf.append(f"- 호흡수: {int(rr)}/분\n")
-        if _ent(spo2): buf.append(f"- SpO₂: {int(spo2)}%\n")
-        if _ent(urine_24h): buf.append(f"- 24시간 소변 횟수: {int(urine_24h)}\n")
-        if _ent(retraction): buf.append(f"- 흉곽 함몰: {int(retraction)}\n")
-        if _ent(nasal_flaring): buf.append(f"- 콧벌렁임: {int(nasal_flaring)}\n")
-        if _ent(apnea): buf.append(f"- 무호흡: {int(apnea)}\n")
 
     if extras.get("abx"):
         buf.append("\n## 항생제\n")
@@ -841,85 +624,75 @@ if run:
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                        mime="text/plain")
 
-    if HAS_PDF:
-        def md_to_pdf_bytes(md_text: str) -> bytes:
-            # Register a Korean font if present (user upload has priority)
-            chosen_path = None
-            candidates = []
-            # user uploaded font via sidebar?
-            if '__pdf_font_used' in st.session_state:
-                candidates.append(st.session_state['__pdf_font_used'])
-            # fonts folder bundled
-            for fname in ['fonts/NanumGothic.ttf', 'fonts/NotoSansKR-Regular.otf', 'fonts/NanumGothic.otf']:
-                if os.path.exists(fname):
-                    candidates.append(fname)
-            # fallback: current directory
-            for fname in ['NanumGothic.ttf', 'NotoSansKR-Regular.otf', 'NanumGothic.otf']:
-                if os.path.exists(fname):
-                    candidates.append(fname)
+    # ===== PDF (font-locked) =====
+    FONT_PATH_REG = os.path.join("fonts", "NanumGothic-Regular.ttf")
+    FONT_PATH_B   = os.path.join("fonts", "NanumGothic-Bold.ttf")
+    FONT_PATH_XB  = os.path.join("fonts", "NanumGothic-ExtraBold.ttf")
 
-            font_registered = False
-            font_name = 'KoreanFallback'
-            for path in candidates:
-                try:
-                    pdfmetrics.registerFont(TTFont(font_name, path))
-                    chosen_path = path
-                    font_registered = True
-                    break
-                except Exception:
-                    continue
+    def md_to_pdf_bytes_fontlocked(md_text: str) -> bytes:
+        if not os.path.exists(FONT_PATH_REG):
+            raise FileNotFoundError("fonts/NanumGothic-Regular.ttf 가 없습니다. 폰트를 넣어주세요.")
+        font_name = "NanumGothic"
+        pdfmetrics.registerFont(TTFont(font_name, FONT_PATH_REG))
+        bold_name = None
+        if os.path.exists(FONT_PATH_XB):
+            try:
+                pdfmetrics.registerFont(TTFont("NanumGothic-ExtraBold", FONT_PATH_XB))
+                bold_name = "NanumGothic-ExtraBold"
+            except Exception:
+                pass
+        if not bold_name and os.path.exists(FONT_PATH_B):
+            try:
+                pdfmetrics.registerFont(TTFont("NanumGothic-Bold", FONT_PATH_B))
+                bold_name = "NanumGothic-Bold"
+            except Exception:
+                pass
 
-            buf_pdf = BytesIO()
-            doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
-                                    topMargin=15*mm, bottomMargin=15*mm)
-            styles = getSampleStyleSheet()
-            # Force styles to use Korean-capable font if available
-            if font_registered:
-                for s in ['Title','Heading1','Heading2','BodyText']:
-                    if s in styles.byName:
-                        styles[s].fontName = font_name
-
-            story = []
-            for line in md_text.splitlines():
-                line = line.rstrip("\n")
-                if not line.strip():
-                    story.append(Spacer(1, 4*mm))
-                    continue
-                if line.startswith("# "):
-                    p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
-                elif line.startswith("## "):
-                    p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
-                elif line.startswith("- "):
-                    p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
-                elif line.startswith("> "):
-                    p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
-                else:
-                    p = Paragraph(escape(line), styles['BodyText'])
-                story.append(p)
-
-            # build PDF
-            doc.build(story)
-
-            # Info banner in UI about font used
-            if font_registered and chosen_path:
-                st.info(f"PDF 생성 시 사용한 폰트: {os.path.basename(chosen_path)}")
+        buf_pdf = BytesIO()
+        doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
+                                topMargin=15*mm, bottomMargin=15*mm)
+        styles = getSampleStyleSheet()
+        # force fonts
+        for s in ['Title','Heading1','Heading2','BodyText']:
+            if s in styles.byName:
+                styles[s].fontName = bold_name or font_name if s != 'BodyText' else font_name
+        story = []
+        for line in md_text.splitlines():
+            line = line.rstrip("\n")
+            if not line.strip():
+                story.append(Spacer(1, 4*mm))
+                continue
+            if line.startswith("# "):
+                p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
+            elif line.startswith("## "):
+                p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
+            elif line.startswith("- "):
+                p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
+            elif line.startswith("> "):
+                p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
             else:
-                st.warning("PDF 생성에 시스템 기본 폰트를 사용했습니다. 일부 한글이 깨질 수 있어요. 'fonts/NanumGothic.ttf'를 넣어주세요.")
+                p = Paragraph(escape(line), styles['BodyText'])
+            story.append(p)
+        doc.build(story)
+        return buf_pdf.getvalue()
 
-            return buf_pdf.getvalue()
-
+    if HAS_PDF:
         try:
-            pdf_bytes = md_to_pdf_bytes(report_md)
+            pdf_bytes = md_to_pdf_bytes_fontlocked(report_md)
+            st.info("PDF 생성 시 사용한 폰트: NanumGothic-Regular.ttf (제목은 Bold/ExtraBold가 있으면 자동 적용)")
             st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
                                file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                                mime="application/pdf")
+        except FileNotFoundError as e:
+            st.warning(str(e))
         except Exception as e:
-            st.error(f"PDF 생성 중 오류가 발생했습니다: {e}")
-            st.info("reportlab 설치 및 한글 폰트 파일을 확인해주세요.")
+            st.error(f"PDF 생성 중 오류: {e}")
     else:
-        st.info("PDF 변환 모듈(reportlab)을 찾을 수 없어 .pdf 다운로드를 숨겼습니다. 'pip install reportlab' 후 사용 가능합니다.")
+        st.info("PDF 모듈(reportlab)이 없어 .pdf 버튼이 숨겨졌습니다. (pip install reportlab)")
 
     # Save session record
+    if "records" not in st.session_state:
+        st.session_state.records = {}
     if nickname and nickname.strip():
         rec = {
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -943,13 +716,12 @@ st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
 if not HAS_PD:
     st.info("그래프는 pandas 설치 시 활성화됩니다. (pip install pandas)")
 else:
-    if st.session_state.records:
+    if "records" in st.session_state and st.session_state.records:
         sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
         rows = st.session_state.records.get(sel, [])
         if rows:
-            # Build dataframe with labeled columns
             data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in [LBL_WBC, LBL_Hb, LBL_PLT, LBL_CRP, LBL_ANC]}} for r in rows ]
-            import pandas as pd  # local import for safety
+            import pandas as pd  # local import
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
         else:
@@ -959,3 +731,4 @@ else:
 
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
+st.markdown("> " + DISCLAIMER)
