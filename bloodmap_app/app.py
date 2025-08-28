@@ -29,7 +29,7 @@ st.set_page_config(page_title=PAGE_TITLE, layout="centered")
 st.title(APP_TITLE)
 st.markdown(MADE_BY)
 st.markdown(CAFE_LINK_MD)
-st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교 · 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
+st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교· 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
 
 os.makedirs("fonts", exist_ok=True)
 
@@ -58,7 +58,7 @@ infect_sel = None
 ped_topic = None
 
 if mode == "일반/암":
-    group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암", "소아암", "희귀암"])
+    group = st.selectbox("암 그룹 선택", ["일반", "혈액암", "고형암", "소아암", "희귀암"])
     if group == "혈액암":
         cancer = st.selectbox("혈액암 종류", ["AML","APL","ALL","CML","CLL"])
     elif group == "고형암":
