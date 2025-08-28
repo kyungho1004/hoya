@@ -1,4 +1,3 @@
-
 from datetime import datetime, date
 import os
 import streamlit as st
@@ -432,12 +431,13 @@ else:
 
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
+
 # ===== Drugs & extras =====
 meds = {}
 extras = {}
 
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
-    st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
+    st.markdown("### 💊 항암제 선택 및 입력")
 
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide",
@@ -447,7 +447,6 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "CML": ["Imatinib","Dasatinib","Nilotinib","Hydroxyurea"],
         "CLL": ["Fludarabine","Cyclophosphamide","Rituximab"],
     }
-
     solid_by_cancer = {
         "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
                            "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab","Pembrolizumab","Nivolumab"],
@@ -470,7 +469,6 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "식도암": ["Cisplatin","5-FU","Paclitaxel","Nivolumab","Pembrolizumab"],
         "방광암": ["Cisplatin","Gemcitabine","Bevacizumab","Pembrolizumab","Nivolumab"],
     }
-
     rare_by_cancer = {
         "담낭암(Gallbladder cancer)": ["Gemcitabine","Cisplatin"],
         "부신암(Adrenal cancer)": ["Mitotane","Etoposide","Doxorubicin","Cisplatin"],
@@ -481,49 +479,50 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "비인두암(NPC)": ["Cisplatin","5-FU","Gemcitabine","Bevacizumab","Nivolumab","Pembrolizumab"],
         "GIST": ["Imatinib","Sunitinib","Regorafenib"],
     }
-
     default_drugs_by_group = {
         "혈액암": heme_by_cancer.get(cancer, []),
         "고형암": solid_by_cancer.get(cancer, []),
         "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin","Cisplatin","Topotecan","Irinotecan"],
         "희귀암": rare_by_cancer.get(cancer, []),
     }
-
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
-    # ARA-C special form/dose block
-    if "ARA-C" in drug_list:
-        st.markdown("**ARA-C (시타라빈)**")
-        ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
-        ara_dose = num_input_generic("용량/일(임의 입력, 0=미사용)", key="ara_dose", decimals=1, placeholder="예: 100")
-        if ara_dose > 0:
-            meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
-        st.divider()
-        drug_list.remove("ARA-C")
+    
+drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
+drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
+selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
 
-    # Render remaining drugs
-    for d in drug_list:
+    for d in selected_drugs:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
-            amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수(정수, 0=미사용)", key=f"med_{d}", as_int=True, placeholder="예: 2")
+            amt = num_input_generic(f"{d} ({alias}) - 캡슐 개수", key=f"med_{d}", as_int=True, placeholder="예: 2")
+        elif d == "ARA-C":
+            ara_form = st.selectbox(f"{d} ({alias}) - 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key=f"ara_form_{d}")
+            amt = num_input_generic(f"{d} ({alias}) - 용량/일", key=f"med_{d}", decimals=1, placeholder="예: 100")
+            if amt>0:
+                meds[d] = {"form": ara_form, "dose": amt}
+            continue
         else:
-            amt = num_input_generic(f"{d} ({alias}) - 용량/알약 개수(0=미사용)", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
-        try:
-            if amt and float(amt)>0:
-                meds[d] = {"dose_or_tabs": amt}
-        except Exception:
-            pass
+            amt = num_input_generic(f"{d} ({alias}) - 용량/알약", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
+        if amt and float(amt)>0:
+            meds[d] = {"dose_or_tabs": amt}
 
-st.markdown("### 🧪 항생제 입력 (0=미사용)")
+# 항생제 드롭다운
+st.markdown("### 🧪 항생제 선택 및 입력")
 extras["abx"] = {}
-for abx in ["페니실린계","세팔로스포린계","마크롤라이드","플루오로퀴놀론",
-            "카바페넴","TMP-SMX","메트로니다졸","반코마이신"]:
-    extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량 또는 횟수(0=미사용)", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
+
+abx_search = st.text_input("🔍 항생제 검색", key="abx_search")
+abx_choices = [a for a in ABX_GUIDE.keys() if not abx_search or abx_search.lower() in a.lower() or any(abx_search.lower() in tip.lower() for tip in ABX_GUIDE[a])]
+selected_abx = st.multiselect("항생제 계열 선택", abx_choices, default=[])
+
+for abx in selected_abx:
+    extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
 
 st.markdown("### 💧 동반 약물/상태")
-extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일, 0=미복용)", key="diuretic_amt", decimals=1, placeholder="예: 1")
+extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
 # ===== UI 2) Inputs =====
+
 st.divider()
 if mode == "일반/암":
     st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
@@ -1016,3 +1015,5 @@ with st.expander("열기 / 닫기", expanded=False):
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
+
+
