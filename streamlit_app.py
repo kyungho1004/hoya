@@ -489,6 +489,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
 
     
+drug_list = locals().get('drug_list', [])
 drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
@@ -1016,3 +1017,4 @@ with st.expander("열기 / 닫기", expanded=False):
 # ===== Sticky disclaimer =====
 st.caption("📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap")
 st.markdown("> " + DISCLAIMER)
+
