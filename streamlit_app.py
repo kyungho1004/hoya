@@ -490,7 +490,6 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
 
     
 drug_search = st.text_input("🔍 항암제 검색", key="drug_search") or ""
-or ""
 drug_choices = []
 for d in drug_list:
     alias = str(ANTICANCER.get(d, {}).get("alias", ""))
@@ -517,7 +516,6 @@ st.markdown("### 🧪 항생제 선택 및 입력")
 extras["abx"] = {}
 
 abx_search = st.text_input("🔍 항생제 검색", key="abx_search") or ""
-or ""
 abx_choices = []
 for a in ABX_GUIDE.keys():
     tips = [str(t) for t in ABX_GUIDE.get(a, [])]
