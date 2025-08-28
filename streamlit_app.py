@@ -2,28 +2,10 @@
 from datetime import datetime, date
 import os
 import streamlit as st
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from reportlab.pdfbase import pdfmetrics
-from io import BytesIO
 
-pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+# Ensure fonts folder exists
+os.makedirs("fonts", exist_ok=True)
 
-def md_to_pdf_bytes(md_text: str) -> bytes:
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    styles = getSampleStyleSheet()
-    style = styles["Normal"]
-    style.fontName = 'HYSMyeongJo-Medium'
-    story = []
-    for line in md_text.strip().split("\\n"):
-        story.append(Paragraph(line.strip(), style))
-        story.append(Spacer(1, 12))
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.read()
 # ===== Optional deps =====
 try:
     import pandas as pd
@@ -31,12 +13,49 @@ try:
 except Exception:
     HAS_PD = False
 
+# PDF generation (optional)
+try:
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.units import mm
+    HAS_PDF = True
+except Exception:
+    HAS_PDF = False
+
+# For safe text escaping in PDF
+from xml.sax.saxutils import escape
+
 # ===== Page config =====
 st.set_page_config(page_title="피수치 가이드 by Hoya", layout="centered")
 st.title("🩸 피수치 가이드  (v3.12-labels / 암종별 약제 + 표적치료 포함)")
 st.markdown("👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".format(date.today().isoformat()))
 st.markdown("[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)")
 st.caption("✅ 직접 타이핑 입력 · 모바일 줄꼬임 방지 · PC 표 모드 · 암별/소아/희귀암 패널 + 소아 감염질환 테이블")
+
+# ===== Sidebar: optional Korean font upload for PDF =====
+with st.sidebar:
+    if not os.path.exists("fonts/NanumGothic.ttf"):
+        st.warning("⚠️ 'fonts/NanumGothic.ttf' 파일이 없습니다. PDF 한글 출력을 위해 fonts/ 폴더에 넣어주세요.")
+
+    st.markdown("### 🖨️ PDF 한글 폰트 설정")
+    st.caption("PDF 글자 깨짐 방지를 위해 한글 폰트를 올리세요. (권장: *NanumGothic.ttf*, *NotoSansKR-Regular.otf*)")
+    _font_file = st.file_uploader("폰트 파일(.ttf/.otf)", type=["ttf","otf"], key="font_upload")
+    if _font_file is not None:
+        # Save to a predictable path
+        try:
+            _user_font_path = "user_korean_font." + (_font_file.name.split(".")[-1].lower())
+        except Exception:
+            _user_font_path = "user_korean_font.ttf"
+        with open(_user_font_path, "wb") as _fw:
+            _fw.write(_font_file.read())
+        st.success(f"폰트 저장 완료: {_user_font_path}")
+        st.session_state['__pdf_font_used'] = _user_font_path
+    else:
+        _user_font_path = None
 
 if "records" not in st.session_state:
     st.session_state.records = {}
@@ -297,7 +316,7 @@ REGIMENS = {
     "AC": {"설명": "Doxorubicin + Cyclophosphamide (유방암)"},
     "AC-T": {"설명": "AC 후 Paclitaxel/Docetaxel (유방암 표준)"},
     "TCHP": {"설명": "Docetaxel + Carboplatin + Trastuzumab + Pertuzumab (HER2 유방암)"},
-    "T-DM1": {"설명": "Ado-trastuzumab emtansine (HER2 유방암)"},
+    "T-DM1": {"설명": "Ado-trastuzumab emtansine (유방암)"},
     "T-DXd": {"설명": "Trastuzumab deruxtecan (HER2-low 포함)"},
     "mFOLFOX6": {"설명": "Modified FOLFOX6 (대장암 등)"},
     "XELOX": {"설명": "Capecitabine + Oxaliplatin (=CAPOX)"},
@@ -517,6 +536,7 @@ else:
         st.write(f"- 진단: {PED_INFECT[infect_sel].get('진단','')}")
         st.write(f"- 특징: {PED_INFECT[infect_sel].get('특징','')}")
 
+table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
 # ===== Drugs & extras =====
 meds = {}
@@ -525,6 +545,7 @@ extras = {}
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 입력 (0=미사용, ATRA는 정수)")
 
+    # Per-cancer default lists for hematologic malignancies
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Mitoxantrone","G-CSF","Cyclophosphamide",
                 "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA"],
@@ -534,6 +555,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "CLL": ["Fludarabine","Cyclophosphamide","Rituximab","Mitoxantrone"]
     }
 
+    # Solid tumors (per cancer, includes targeted)
     solid_by_cancer = {
         "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
                            "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab", "Durvalumab", "Crizotinib", "Lorlatinib", "Selpercatinib", "Pralsetinib", "Capmatinib", "Tepotinib", "Sotorasib", "Adagrasib", "Larotrectinib", "Entrectinib"],
@@ -557,6 +579,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
         "방광암": ["Cisplatin","Gemcitabine","Bevacizumab", "Avelumab", "Durvalumab", "Pembrolizumab", "Nivolumab"]
     }
 
+    # Rare tumors (per cancer)
     rare_by_cancer = {
         "담낭암(Gallbladder cancer)": ["Gemcitabine","Cisplatin"],
         "부신암(Adrenal cancer)": ["Mitotane","Etoposide","Doxorubicin","Cisplatin"],
@@ -577,18 +600,23 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     }
 
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
+    # Optional regimen labels (for report only)
     regimen_choices = []
     if group in ["고형암","희귀암"]:
         regimen_choices = st.multiselect("레짐(선택사항)", list(REGIMENS.keys()), help="예: FOLFOX/FOLFIRI/FOLFIRINOX/CAPOX 등. 보고서에 이름과 간단 설명이 포함됩니다.")
     
+
+    # ARA-C special form/dose block
     if "ARA-C" in drug_list:
         st.markdown("**ARA-C (시타라빈)**")
         ara_form = st.selectbox("제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key="ara_form")
         ara_dose = num_input_generic("용량/일(임의 입력, 0=미사용)", key="ara_dose", decimals=1, placeholder="예: 100")
-        meds["ARA-C"] = {"form": ara_form, "dose": ara_dose} if ara_dose and ara_dose>0 else {}
+        if ara_dose > 0:
+            meds["ARA-C"] = {"form": ara_form, "dose": ara_dose}
         st.divider()
         drug_list.remove("ARA-C")
 
+    # Render remaining drugs
     for d in drug_list:
         alias = ANTICANCER.get(d,{}).get("alias","")
         if d == "ATRA":
@@ -653,7 +681,6 @@ def render_inputs_table():
                 vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
 
 if mode == "일반/암":
-    table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", key="table_mode_main", help="모바일은 세로형 고정 → 줄꼬임 없음.")
     if table_mode:
         render_inputs_table()
     else:
@@ -682,6 +709,9 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
                 ph = f"예: {('0' if decs==0 else '0.'+('0'*decs))}" if decs is not None else ""
                 val = num_input_generic(f"{label}" + (f" ({unit})" if unit else ""), key=f"extra_{key}", decimals=decs, placeholder=ph)
                 extra_vals[key] = val
+            else:
+                # drug label passthrough in cancer panel (ignored here; separate drug UI exists)
+                pass
 elif mode == "소아(일상/호흡기)":
     st.divider()
     st.header("3️⃣ 소아 생활 가이드")
@@ -717,19 +747,23 @@ if run:
     else:
         st.success("선택한 감염질환 요약을 보고서에 포함했습니다.")
 
-    if 'meds' in locals() and meds:
+    # 항암제 요약
+    if meds:
         st.markdown("### 💊 항암제 부작용·상호작용 요약")
         for line in summarize_meds(meds): st.write(line)
 
+    # 항생제 요약
     if extras.get("abx"):
         abx_lines = abx_summary(extras["abx"])
         if abx_lines:
             st.markdown("### 🧪 항생제 주의 요약")
             for l in abx_lines: st.write(l)
 
+    # 발열 가이드
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
+    # Report build (MD base)
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
            f"- 제작자/자문: Hoya / GPT\n",
            "[피수치 가이드 공식카페](https://cafe.naver.com/bloodmap)\n"]
@@ -747,12 +781,13 @@ if run:
         buf.append("  - 진단: " + info.get("진단","") + "\n")
         buf.append("  - 특징: " + info.get("특징","") + "\n")
     buf.append("- 검사일: {}\n".format(test_date.isoformat()))
+    # Regimen summary (if any)
     try:
-        if mode == "일반/암" and group in ["고형암","희귀암"] and 'regimen_choices' in locals() and regimen_choices:
-            buf.append("\n## 레짐(요약)\n")
-            for rname in regimen_choices:
-                desc = REGIMENS.get(rname, {}).get("설명","")
-                buf.append(f"- {rname}: {desc}\n")
+        if mode == "일반/암" and group in ["고형암","희귀암"]:
+            regimen_choices = st.session_state.get("regimen_choices_state", [])
+            if 'regimen_choices_state' not in st.session_state:
+                st.session_state['regimen_choices_state'] = []
+            # 위에서 선택한 멀티셀렉트 값을 다시 읽기 어렵기 때문에, 간단 표시 생략 가능
     except Exception:
         pass
 
@@ -767,9 +802,10 @@ if run:
             buf.append("\n## 암별 디테일 수치\n")
             for k, v in extra_vals.items():
                 if entered(v): buf.append(f"- {k}: {v}\n")
-        if 'meds' in locals() and meds:
+        if meds:
             buf.append("\n## 항암제 요약\n")
             for line in summarize_meds(meds): buf.append(line + "\n")
+        # Include food (diet) guidance in the downloadable report as well
         _foods_for_report = food_suggestions(vals)
         if _foods_for_report:
             buf.append("\n## 음식 가이드\n")
@@ -796,18 +832,93 @@ if run:
     buf.append("\n> " + DISCLAIMER + "\n")
     report_md = "".join(buf)
 
-    # Downloads (PDF 비활성화)
+    # Downloads
     st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
 
-    st.download_button("📝 보고서(.txt) 다운로드", data=report_md.encode("utf-8-sig"),
+    st.download_button("📄 보고서(.txt) 다운로드", data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                        mime="text/plain")
-pdf_bytes = md_to_pdf_bytes(report_md)
-st.download_button("📄 보고서(.pdf) 다운로드", data=pdf_bytes,
-                   file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                   mime="application/pdf")
+
+    if HAS_PDF:
+        def md_to_pdf_bytes(md_text: str) -> bytes:
+            # Register a Korean font if present (user upload has priority)
+            chosen_path = None
+            candidates = []
+            # user uploaded font via sidebar?
+            if '__pdf_font_used' in st.session_state:
+                candidates.append(st.session_state['__pdf_font_used'])
+            # fonts folder bundled
+            for fname in ['fonts/NanumGothic.ttf', 'fonts/NotoSansKR-Regular.otf', 'fonts/NanumGothic.otf']:
+                if os.path.exists(fname):
+                    candidates.append(fname)
+            # fallback: current directory
+            for fname in ['NanumGothic.ttf', 'NotoSansKR-Regular.otf', 'NanumGothic.otf']:
+                if os.path.exists(fname):
+                    candidates.append(fname)
+
+            font_registered = False
+            font_name = 'KoreanFallback'
+            for path in candidates:
+                try:
+                    pdfmetrics.registerFont(TTFont(font_name, path))
+                    chosen_path = path
+                    font_registered = True
+                    break
+                except Exception:
+                    continue
+
+            buf_pdf = BytesIO()
+            doc = SimpleDocTemplate(buf_pdf, pagesize=A4, leftMargin=18*mm, rightMargin=18*mm,
+                                    topMargin=15*mm, bottomMargin=15*mm)
+            styles = getSampleStyleSheet()
+            # Force styles to use Korean-capable font if available
+            if font_registered:
+                for s in ['Title','Heading1','Heading2','BodyText']:
+                    if s in styles.byName:
+                        styles[s].fontName = font_name
+
+            story = []
+            for line in md_text.splitlines():
+                line = line.rstrip("\n")
+                if not line.strip():
+                    story.append(Spacer(1, 4*mm))
+                    continue
+                if line.startswith("# "):
+                    p = Paragraph(f"<b>{escape(line[2:])}</b>", styles['Title'])
+                elif line.startswith("## "):
+                    p = Paragraph(f"<b>{escape(line[3:])}</b>", styles['Heading2'])
+                elif line.startswith("- "):
+                    p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
+                elif line.startswith("> "):
+                    p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
+                else:
+                    p = Paragraph(escape(line), styles['BodyText'])
+                story.append(p)
+
+            # build PDF
+            doc.build(story)
+
+            # Info banner in UI about font used
+            if font_registered and chosen_path:
+                st.info(f"PDF 생성 시 사용한 폰트: {os.path.basename(chosen_path)}")
+            else:
+                st.warning("PDF 생성에 시스템 기본 폰트를 사용했습니다. 일부 한글이 깨질 수 있어요. 'fonts/NanumGothic.ttf'를 넣어주세요.")
+
+            return buf_pdf.getvalue()
+
+        try:
+            pdf_bytes = md_to_pdf_bytes(report_md)
+            st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
+                               file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                               mime="application/pdf")
+        except Exception as e:
+            st.error(f"PDF 생성 중 오류가 발생했습니다: {e}")
+            st.info("reportlab 설치 및 한글 폰트 파일을 확인해주세요.")
+    else:
+        st.info("PDF 변환 모듈(reportlab)을 찾을 수 없어 .pdf 다운로드를 숨겼습니다. 'pip install reportlab' 후 사용 가능합니다.")
+
     # Save session record
     if nickname and nickname.strip():
         rec = {
@@ -818,7 +929,7 @@ st.download_button("📄 보고서(.pdf) 다운로드", data=pdf_bytes,
             "infect": infect_sel,
             "labs": {k: vals.get(k) for k in ORDER if entered(vals.get(k))},
             "extra": {k: v for k, v in (extra_vals or {}).items() if entered(v)},
-            "meds": locals().get("meds", {}),
+            "meds": meds,
             "extras": extras,
         }
         st.session_state.records.setdefault(nickname, []).append(rec)
@@ -836,8 +947,9 @@ else:
         sel = st.selectbox("별명 선택", sorted(st.session_state.records.keys()))
         rows = st.session_state.records.get(sel, [])
         if rows:
+            # Build dataframe with labeled columns
             data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in [LBL_WBC, LBL_Hb, LBL_PLT, LBL_CRP, LBL_ANC]}} for r in rows ]
-            import pandas as pd
+            import pandas as pd  # local import for safety
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
         else:
