@@ -1,0 +1,8 @@
+# .streamlit/config.toml
+[general]
+script = "bloodmap_app/streamlit_app_fixed2.py"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
