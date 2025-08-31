@@ -1,11 +1,57 @@
 
-FOODS={"Albumin_low":["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
-"K_low":["바나나","감자","호박죽","고구마","오렌지"],
-"Hb_low":["소고기","시금치","두부","달걀 노른자","렌틸콩"],
-"Na_low":["전해질 음료","미역국","오트밀죽","삶은 감자"],
-"Ca_low":["연어 통조림","두부","케일","브로콜리"]}
-FOODS_SEASONAL={"봄":["두릅","봄동","주꾸미","달래","쑥"],
-"여름":["오이","토마토","옥수수","참외","수박"],
-"가을":["버섯","고등어","전어","배","단호박"],
-"겨울":["무","배추","굴","귤","시금치"]}
-RECIPE_LINKS={x:"https://www.10000recipe.com/" for x in sum(FOODS.values(),[])}
+FOODS = {
+    "Albumin_low": ["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
+    "K_low": ["바나나","감자","호박죽","고구마","오렌지"],
+    "Hb_low": ["소고기","시금치","두부","달걀 노른자","렌틸콩"],
+    "Na_low": ["전해질 음료","미역국","바나나","오트밀죽","삶은 감자"],
+    "Ca_low": ["연어 통조림","두부","케일","브로콜리","(참깨 제외)"],
+}
+
+FOODS_SEASONAL = {
+    "봄": ["두릅", "봄동", "주꾸미", "달래", "쑥"],
+    "여름": ["오이", "토마토", "옥수수", "참외", "수박"],
+    "가을": ["버섯", "고등어", "전어", "배", "단호박"],
+    "겨울": ["무", "배추", "굴", "귤", "시금치"],
+}
+
+RECIPE_LINKS = {
+    "달걀": "https://recipe1.ezmember.co.kr/",
+    "연두부": "https://www.10000recipe.com/",
+    "흰살 생선": "https://www.10000recipe.com/",
+    "닭가슴살": "https://www.10000recipe.com/",
+    "귀리죽": "https://www.10000recipe.com/",
+    "바나나": "https://www.10000recipe.com/",
+    "감자": "https://www.10000recipe.com/",
+    "호박죽": "https://www.10000recipe.com/",
+    "고구마": "https://www.10000recipe.com/",
+    "오렌지": "https://www.10000recipe.com/",
+    "소고기": "https://www.10000recipe.com/",
+    "시금치": "https://www.10000recipe.com/",
+    "두부": "https://www.10000recipe.com/",
+    "달걀 노른자": "https://www.10000recipe.com/",
+    "렌틸콩": "https://www.10000recipe.com/",
+    "전해질 음료": "https://www.10000recipe.com/",
+    "미역국": "https://www.10000recipe.com/",
+    "오트밀죽": "https://www.10000recipe.com/",
+    "삶은 감자": "https://www.10000recipe.com/",
+    "연어 통조림": "https://www.10000recipe.com/",
+    "두릅": "https://www.10000recipe.com/",
+    "봄동": "https://www.10000recipe.com/",
+    "주꾸미": "https://www.10000recipe.com/",
+    "달래": "https://www.10000recipe.com/",
+    "쑥": "https://www.10000recipe.com/",
+    "오이": "https://www.10000recipe.com/",
+    "토마토": "https://www.10000recipe.com/",
+    "옥수수": "https://www.10000recipe.com/",
+    "참외": "https://www.10000recipe.com/",
+    "수박": "https://www.10000recipe.com/",
+    "버섯": "https://www.10000recipe.com/",
+    "고등어": "https://www.10000recipe.com/",
+    "전어": "https://www.10000recipe.com/",
+    "배": "https://www.10000recipe.com/",
+    "단호박": "https://www.10000recipe.com/",
+    "무": "https://www.10000recipe.com/",
+    "배추": "https://www.10000recipe.com/",
+    "굴": "https://www.10000recipe.com/",
+    "귤": "https://www.10000recipe.com/",
+}
