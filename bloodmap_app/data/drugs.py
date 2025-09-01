@@ -17,8 +17,6 @@ ANTICANCER = {
     "Dasatinib":{"alias":"다사티닙(TKI)","aes":["혈소판감소","흉막/심막 삼출","설사"]},
     "Nilotinib":{"alias":"닐로티닙(TKI)","aes":["QT 연장","고혈당","간수치 상승"]},
     "Rituximab":{"alias":"리툭시맙","aes":["주입반응","감염 위험","HBV 재활성"]},
-
-    # Solid-tumor common (발췌)
     "Paclitaxel":{"alias":"파클리탁셀","aes":["말초신경병증","호중구감소"]},
     "Docetaxel":{"alias":"도세탁셀","aes":["체액저류","호중구감소"]},
     "Doxorubicin":{"alias":"독소루비신","aes":["심독성","탈모","구내염"]},
@@ -35,7 +33,6 @@ ANTICANCER = {
     "Pembrolizumab":{"alias":"펨브롤리주맙(PD-1)","aes":["면역관련 이상반응"]},
     "Nivolumab":{"alias":"니볼루맙(PD-1)","aes":["면역관련 이상반응"]},
 }
-
 ABX_GUIDE = {
     "페니실린계":["발진/설사","와파린 효과↑ 가능"],
     "세팔로스포린계":["설사","일부 알코올과 병용 시 플러싱 유사"],
