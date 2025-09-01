@@ -1,1 +1,1 @@
-# Bloodmap v3.14 package
+# bloodmap_app package
