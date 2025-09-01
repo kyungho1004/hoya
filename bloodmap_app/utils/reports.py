@@ -95,6 +95,5 @@ def md_to_pdf_bytes_fontlocked(md_text: str) -> bytes:
         elif line.startswith("- "): p = Paragraph("• " + escape(line[2:]), styles['BodyText'])
         elif line.startswith("> "): p = Paragraph(f"<i>{escape(line[2:])}</i>", styles['BodyText'])
         else: p = Paragraph(escape(line), styles['BodyText'])
-        story.append(p)
     doc.build(story)
     return buf.getvalue()

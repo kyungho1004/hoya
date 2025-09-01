@@ -48,21 +48,16 @@ def interpret_labs(l, extras):
 
 def compare_with_previous(nickname, new_labs):
     rows = st.session_state.records.get(nickname, []) if "records" in st.session_state else []
-    if not rows:
-        return []
-    prev = rows[-1].get("labs", {})
-    out = []
+    if not rows: return []
+    prev = rows[-1].get("labs", {}); out = []
     for k in ORDER:
         if entered(new_labs.get(k)) and entered(prev.get(k)):
             try:
-                cur = float(new_labs[k])
-                old = float(prev[k])
-                delta = cur - old
+                cur = float(new_labs[k]); old = float(prev[k]); delta = cur - old
                 sign = "↑" if delta>0 else ("↓" if delta<0 else "→")
                 dtxt = f"{delta:+.2f}" if k == LBL_CRP else (f"{delta:+.1f}")
                 out.append(f"- {k}: {_fmt(k, cur)} ({sign} {dtxt} vs { _fmt(k, old) })")
-            except Exception:
-                pass
+            except Exception: pass
     return out
 
 def seasonal_food_section():
@@ -70,30 +65,26 @@ def seasonal_food_section():
     season = "봄" if m in (3,4,5) else "여름" if m in (6,7,8) else "가을" if m in (9,10,11) else "겨울"
     st.markdown(f"#### 🥗 계절 식재료 ({season})")
     items = FOODS_SEASONAL.get(season, [])
-    if items:
-        st.write("· " + ", ".join(items))
+    if items: st.write("· " + ", ".join(items))
     st.caption("간단 레시피는 아래 추천 목록의 각 식재료 링크를 눌러 참고하세요.")
 
 def food_suggestions(l, anc_place):
     from .inputs import entered as _e
-    foods=[]
-    seasonal_food_section()
+    foods=[]; seasonal_food_section()
     if _e(l.get(LBL_Alb)) and l[LBL_Alb]<3.5: foods.append(("알부민 낮음", FOODS["Albumin_low"]))
     if _e(l.get(LBL_K)) and l[LBL_K]<3.5: foods.append(("칼륨 낮음", FOODS["K_low"]))
     if _e(l.get(LBL_Hb)) and l[LBL_Hb]<12: foods.append(("Hb 낮음", FOODS["Hb_low"]))
     if _e(l.get(LBL_Na)) and l[LBL_Na]<135: foods.append(("나트륨 낮음", FOODS["Na_low"]))
     if _e(l.get(LBL_Ca)) and l[LBL_Ca]<8.5: foods.append(("칼슘 낮음", FOODS["Ca_low"]))
     if _e(l.get(LBL_ANC)) and l[LBL_ANC]<500:
-        anc_line = "🧼 (병원) 멸균/조리식 우선, 외부 음식 제한." if anc_place=="병원" else \
-                   "🧼 (가정) 생채소 금지, 완전가열, 2시간 경과 음식 금지."
+        anc_line = "🧼 (병원) 멸균/조리식 우선, 외부 음식 제한." if anc_place=="병원" else "🧼 (가정) 생채소 금지, 완전가열, 2시간 경과 음식 금지."
     else:
         anc_line = None
     lines = []
     for title, lst in foods:
         links = ", ".join([f"[{x}]({RECIPE_LINKS.get(x,'https://www.10000recipe.com/')})" for x in lst])
         lines.append(f"- {title} → " + links)
-    if anc_line:
-        lines.append("- " + anc_line)
+    if anc_line: lines.append("- " + anc_line)
     lines.append("- ⚠️ 항암/백혈병 환자는 철분제는 반드시 주치의와 상의(비타민C 병용 시 흡수↑).")
     return lines
 
@@ -101,8 +92,7 @@ def summarize_meds(meds: dict):
     out=[]
     for k, v in meds.items():
         info=ANTICANCER.get(k)
-        if not info:
-            continue
+        if not info: continue
         line=f"• {k} ({info['alias']}): AE {', '.join(info['aes'])}"
         if k == "ARA-C" and isinstance(v, dict) and v.get("form"):
             line += f" | 제형: {v['form']}"
