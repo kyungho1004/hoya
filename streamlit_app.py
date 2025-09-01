@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Streamlit launcher for Bloodmap v3.14."""
-from bloodmap_app.app import main
-
-if __name__ == "__main__":
-    # Streamlit runs scripts with __name__ == "__main__"
-    main()
+import os, sys
+ROOT = os.path.dirname(__file__)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+os.makedirs(os.path.join(ROOT, "fonts"), exist_ok=True)
+import bloodmap_app.app  # noqa: F401
