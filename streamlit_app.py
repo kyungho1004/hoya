@@ -191,7 +191,7 @@ extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일)", key="
 st.divider()
 if mode == "일반/암":
     st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
-elif mode == "소아(일상/호흡기)"):
+elif mode == "소아(일상/호흡기)")
     st.header("2️⃣ 소아 공통 입력")
 else:
     st.header("2️⃣ (감염질환은 별도 수치 입력 없음)")
