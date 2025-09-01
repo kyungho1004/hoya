@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
+"""공통 유틸 모듈."""
 from __future__ import annotations
-import math
-from typing import Optional, Dict
+from dataclasses import dataclass
+from typing import Dict, Any
 
-def safe_float(x: str | float | int | None) -> Optional[float]:
+@dataclass
+class Lab:
+    key: str
+    label: str
+
+ORDER = [
+    Lab("WBC", "WBC(백혈구)"),
+    Lab("Hb", "Hb(혈색소)"),
+    Lab("PLT", "PLT(혈소판)"),
+    Lab("ANC", "ANC(호중구)"),
+]
+
+def load_css(path: str) -> str:
     try:
-        if x is None: return None
-        return float(x)
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
     except Exception:
-        return None
+        return ""
 
-def anc_risk_badge(anc: Optional[float]) -> tuple[str,str]:
-    if anc is None:
-        return ("미입력", "badge")
-    try:
-        v = float(anc)
-    except Exception:
-        return ("오류", "badge danger")
-    if v < 500: return ("중증 호중구감소", "badge danger")
-    if v < 1000: return ("호중구감소", "badge warn")
-    return ("안정", "badge ok")
-
-def fmt_number(x: Optional[float]) -> str:
-    return "-" if x is None else (f"{x:.2f}" if isinstance(x, float) and (x % 1) else f"{x}")
-
-def kcal_reco(albumin: Optional[float]) -> str:
-    if albumin is None: return "일반 균형식."
-    if albumin < 3.0: return "고단백·고칼로리 식단(연두부, 흰살생선, 달걀 등)."
-    return "균형 잡힌 일반식."
+def make_kv_table(data: Dict[str, Any]) -> str:
+    """간단한 key-value HTML 테이블."""
+    if not data:
+        return "<p>데이터 없음</p>"
+    rows = "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in data.items())
+    return f"""<table class="kv"><tbody>{rows}</tbody></table>"""

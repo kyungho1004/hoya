@@ -1,0 +1,24 @@
+
+/* 모바일 가독성 향상 */
+:root {
+  --gap: 10px;
+}
+
+.block-container {
+  padding-top: 1rem !important;
+  padding-bottom: 2rem !important;
+}
+
+h1, h2, h3 {
+  word-break: keep-all;
+}
+
+.reportview-container .main .block-container {
+  max-width: 860px;
+}
+
+@media (max-width: 480px) {
+  .stButton>button, .stDownloadButton>button, .stTextInput>div>div>input {
+    font-size: 16px !important;
+  }
+}

@@ -1,101 +1,69 @@
+
 # -*- coding: utf-8 -*-
-"""피수치 가이드 v3.14 - 경량 런처
-- main() 필수 존재
-- 모바일 UI에서 줄꼬임 방지
-- 상대경로 import 정확
-"""
+\"\"\"Streamlit 메인 앱 (v3.14 패키징 확인판).
+
+요구사항:
+- 반드시 main() 함수를 제공
+- 모바일 줄꼬임 방지 / 경로 안전 / 즉시 실행 가능
+
+실제 기능(그래프, 보고서 등)은 기존 프로젝트 코드에 맞춰 확장하면 됩니다.
+본 패키지는 '런처/패키징 검증'에 초점을 맞춘 최소구성입니다.
+\"\"\"
 from __future__ import annotations
 import os
-import streamlit as st
+import sys
 
-from .drug_data import ANTICANCER, ANTIBIOTICS, FEVER_RULES, FOOD_NEUTROPENIA
-from .utils import safe_float, anc_risk_badge, fmt_number, kcal_reco
+try:
+    import streamlit as st
+except Exception as e:  # pragma: no cover
+    # Streamlit 미설치 환경에서도 임포트 오류로 파일 생성을 막지 않기 위한 보호.
+    raise
 
-CSS_PATH = os.path.join(os.path.dirname(__file__), "style.css")
+from . import utils
+from . import drug_data
 
-def _inject_css():
-    try:
-        with open(CSS_PATH, "r", encoding="utf-8") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except Exception:
-        pass
-
-def _sidebar():
-    st.sidebar.title("⚙️ 옵션")
-    st.sidebar.markdown("v3.14 · 안정화 테스트 빌드")
-    st.sidebar.markdown("[피수치 가이드 공식카페](https://cafe.naver.com)")
-
-def _input_section():
-    st.subheader("🧪 기본 수치 입력")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        wbc = safe_float(st.text_input("WBC", value=""))
-    with c2:
-        hb = safe_float(st.text_input("Hb(혈색소)", value=""))
-    with c3:
-        plt = safe_float(st.text_input("혈소판(PLT)", value=""))
-    with c4:
-        anc = safe_float(st.text_input("ANC(호중구)", value=""))
-
-    st.subheader("🧫 간/염증/신장")
-    c5, c6, c7, c8 = st.columns(4)
-    with c5:
-        ast = safe_float(st.text_input("AST", value=""))
-    with c6:
-        alt = safe_float(st.text_input("ALT", value=""))
-    with c7:
-        crp = safe_float(st.text_input("CRP", value=""))
-    with c8:
-        cr  = safe_float(st.text_input("Cr", value=""))
-
-    return dict(wbc=wbc, hb=hb, plt=plt, anc=anc, ast=ast, alt=alt, crp=crp, cr=cr)
-
-def _summary(vals: dict):
-    st.markdown("### 📊 요약")
-    badge_text, badge_cls = anc_risk_badge(vals.get("anc"))
-    st.markdown(f"호중구 상태: <span class='{badge_cls}'>{badge_text}</span>", unsafe_allow_html=True)
-    st.caption(f"WBC: {fmt_number(vals.get('wbc'))} · Hb: {fmt_number(vals.get('hb'))} · PLT: {fmt_number(vals.get('plt'))} · CRP: {fmt_number(vals.get('crp'))}")
-
-def _drug_section():
-    st.markdown("### 💊 약물 간단 보기")
-    q = st.text_input("약물 검색(별칭 포함)", value="")
-    def match(name, meta):
-        ql = q.lower().strip()
-        if not ql: return True
-        return (ql in name.lower()) or (ql in meta.get("alias","").lower())
-    with st.expander("항암제", expanded=True):
-        for k, v in ANTICANCER.items():
-            if match(k, v):
-                st.markdown(f"- **{k}** — {v.get('notes','')}  
-  _aka: {v.get('alias','')}_")
-    with st.expander("항생제", expanded=False):
-        for k, v in ANTIBIOTICS.items():
-            if match(k, v):
-                st.markdown(f"- **{k}** — {v.get('notes','')}  
-  _aka: {v.get('alias','')}_")
-
-def _guides(vals: dict):
-    st.markdown("### 🍚 식이/생활 가이드")
-    st.write("• ", kcal_reco(vals.get("hb")))  # 간단 예시
-    badge_text, _ = anc_risk_badge(vals.get("anc"))
-    if "감소" in badge_text:
-        st.write("• 호중구감소 시 식이 주의사항:")
-        for tip in FOOD_NEUTROPENIA:
-            st.write("  - ", tip)
-    st.write("### 🌡️ 발열 대응")
-    for rule in FEVER_RULES:
-        st.write("• ", rule)
+def _inject_css() -> None:
+    css_path = os.path.join(os.path.dirname(__file__), "style.css")
+    css = utils.load_css(css_path)
+    if css:
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 def main():
+    st.set_page_config(page_title="피수치 가이드 v3.14", layout="centered")
     _inject_css()
-    _sidebar()
-    st.title("🩸 피수치 가이드 v3.14 (안정화 패키지)")
-    vals = _input_section()
+
+    st.title("🩸 피수치 가이드 v3.14 · 패키징/경로 검증판")
+    st.caption("이 화면이 보이면 폴더 구조와 import 경로가 정상입니다. (모바일 줄꼬임 방지 적용)")
+
+    with st.expander("✅ 환경 점검"):
+        st.write("- `bloodmap_app.app:main()` 진입 성공")
+        st.write("- `bloodmap_app.utils`, `bloodmap_app.drug_data` import 성공")
+        st.write("- 스타일 시트 로드 시도 완료")
+
+    st.subheader("간단 입력(샘플)")
+    col1, col2 = st.columns(2)
+    with col1:
+        wbc = st.number_input("WBC(백혈구)", min_value=0.0, step=0.1, format="%.1f")
+        hb = st.number_input("Hb(혈색소)", min_value=0.0, step=0.1, format="%.1f")
+    with col2:
+        plt = st.number_input("PLT(혈소판)", min_value=0.0, step=1.0, format="%.0f")
+        anc = st.number_input("ANC(호중구)", min_value=0.0, step=10.0, format="%.0f")
+
+    if st.button("샘플 해석"):
+        result = {
+            "WBC": wbc,
+            "Hb": hb,
+            "PLT": plt,
+            "ANC": anc,
+        }
+        st.markdown(utils.make_kv_table(result), unsafe_allow_html=True)
+
     st.divider()
-    _summary(vals)
-    st.divider()
-    _drug_section()
-    st.divider()
-    _guides(vals)
-    st.markdown("---")
-    st.caption("制作者: Hoya/GPT · 자문: Hoya/GPT")
+    st.subheader("약물 데이터(샘플)")
+    st.write("항암제 키 목록:", list(drug_data.ANTICANCER.keys()))
+    st.write("항생제 키 목록:", list(drug_data.ANTIBIOTICS.keys()))
+
+    st.info("⚠️ 본 패키지는 실행 검증용 최소 구성입니다. 기존 v3.14 기능(조회수, 카테고리, 보고서 등)은 기존 코드 통합 시 붙여넣어 확장하세요.")
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
