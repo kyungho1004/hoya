@@ -1,17 +1,14 @@
-
 # -*- coding: utf-8 -*-
-import streamlit as st, traceback
-st.set_page_config(page_title="피수치 가이드", layout="centered")
+"""Launcher for Bloodmap v3.14 (mobile-friendly)."""
+import os, sys
 
-try:
-    from bloodmap_app.app import main
-except Exception:
-    st.title("🚨 초기화 오류")
-    st.caption("Import 단계에서 예외가 발생했습니다. 아래 로그를 개발자에게 전달하세요.")
-    st.code(traceback.format_exc())
-else:
-    try:
-        main()
-    except Exception:
-        st.title("🚨 실행 중 오류")
-        st.code(traceback.format_exc())
+# Ensure local imports work both in Streamlit Cloud and local runs
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+from bloodmap_app.app import main  # noqa: E402
+
+if __name__ == "__main__":
+    # When executed directly: run main()
+    main()

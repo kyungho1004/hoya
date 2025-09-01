@@ -1,3 +1,1 @@
-streamlit>=1.35
-pandas
-reportlab
+streamlit>=1.36
