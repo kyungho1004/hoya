@@ -1,21 +1,19 @@
 
-import os, json, datetime
-AN_FILE = os.path.join(os.path.dirname(__file__), "..", "analytics.json")
-def _load():
+import os, json, time, streamlit as st
+
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_PATH = os.path.join(LOG_DIR, "visits.jsonl")
+
+def bump_counter():
+    # in-session
+    st.session_state.setdefault("visit_count", 0)
+    st.session_state.visit_count += 1
+    # to file (append jsonl)
     try:
-        with open(AN_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        rec = {"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "ip":"-", "ua":"-", "count": st.session_state.visit_count}
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:
-        return {"visits": 0, "downloads": 0}
-def _save(d):
-    os.makedirs(os.path.dirname(AN_FILE), exist_ok=True)
-    with open(AN_FILE, "w", encoding="utf-8") as f:
-        json.dump(d, f, ensure_ascii=False, indent=2)
-def bump_visit_once(session):
-    d=_load()
-    if not session.get("_counted"):
-        d["visits"]=int(d.get("visits",0))+1; _save(d); session["_counted"]=True
-    return d
-def bump_download():
-    d=_load(); d["downloads"]=int(d.get("downloads",0))+1; _save(d); return d
-def stats(): return _load()
+        pass
+    return st.session_state.visit_count
