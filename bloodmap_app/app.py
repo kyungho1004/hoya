@@ -10,22 +10,20 @@ def _load_css() -> None:
     try:
         import pathlib
         css = pathlib.Path(__file__).with_name("style.css").read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+        st.markdown("<style>" + css + "</style>", unsafe_allow_html=True)
     except Exception:
         pass
 
 def _show_counter():
-    # Session guard
     if "counted" not in st.session_state:
         st.session_state["counted"] = True
-        total = bump_visit("session")
+        bump_visit("session")
     data = load_analytics()
-    left, right = st.columns(2)
-    left.metric("👥 총 방문(세션)", data.get("visits", 0))
-    right.metric("📥 보고서 다운로드", data.get("runs", 0))
+    col1, col2 = st.columns(2)
+    col1.metric("👥 총 방문(세션)", int(data.get("visits", 0)))
+    col2.metric("📥 보고서 다운로드", int(data.get("runs", 0)))
 
 def _report_button(summary_text: str, detail_text: str):
-    # Create downloadable markdown
     md = mk_report_md(summary_text, detail_text)
     b = io.BytesIO(md.encode("utf-8"))
     if st.download_button("📥 보고서(.md) 다운로드", b, file_name="bloodmap_report.md", mime="text/markdown"):
@@ -33,24 +31,33 @@ def _report_button(summary_text: str, detail_text: str):
 
 def _drug_section():
     st.subheader("💊 항암치료 · 약물 요약")
-    search = st.text_input("약물 검색(영문/한글 별칭 모두 가능)", value="")
-    matches = []
-    for name, meta in ANTICANCER.items():
-        alias = meta.get("alias", "").lower()
-        if search.strip() == "" or search.lower() in name.lower() or search.lower() in alias:
-            matches.append((name, meta))
-    if not matches:
-        st.info("검색 결과가 없습니다.")
-        return
-    for name, meta in matches:
-        with st.expander(f"• {name} ({meta.get('alias','')})", expanded=False):
-            st.write(f"분류: {meta.get('class','-')}")
-            for n in meta.get("notes", []):
-                st.markdown(f"- {n}")
+    try:
+        search = st.text_input("약물 검색(영문/한글 별칭 모두 가능)", value="").strip().lower()
+        results = []
+        for name, meta in ANTICANCER.items():
+            alias = str(meta.get("alias", "")).lower()
+            if (not search) or (search in name.lower()) or (search in alias):
+                results.append((name, meta))
+
+        if not results:
+            st.info("검색 결과가 없습니다.")
+            return
+
+        for name, meta in results:
+            title = "• " + name + " (" + str(meta.get("alias", "")) + ")"
+            with st.expander(title, expanded=False):
+                st.write("분류: " + str(meta.get("class", "-")))
+                notes = meta.get("notes", [])
+                if notes:
+                    st.markdown("\n".join(["- " + str(item) for item in notes]))
+                else:
+                    st.write("설명 없음")
+    except Exception as e:
+        st.warning("약물 섹션을 불러오는 중 문제가 발생했지만 앱은 계속 실행됩니다.")
+        st.exception(e)
 
 def _lab_section():
     st.subheader("🩺 기본 수치 입력 (입력한 수치만 결과 표시)")
-    # Minimal placeholder inputs for demonstration
     col1, col2 = st.columns(2)
     with col1:
         wbc = st.number_input("WBC", min_value=0.0, step=0.1, value=0.0, help="백혈구")
@@ -62,19 +69,18 @@ def _lab_section():
         glu = st.number_input("Glucose", min_value=0.0, step=1.0, value=0.0)
 
     shown = []
-    if wbc: shown.append(f"WBC: {wbc}")
-    if hb: shown.append(f"Hb: {hb}")
-    if plt: shown.append(f"혈소판: {plt}")
-    if anc: shown.append(f"ANC: {anc}")
-    if crp: shown.append(f"CRP: {crp}")
-    if glu: shown.append(f"Glucose: {glu}")
+    if wbc: shown.append("WBC: " + str(wbc))
+    if hb: shown.append("Hb: " + str(hb))
+    if plt: shown.append("혈소판: " + str(plt))
+    if anc: shown.append("ANC: " + str(anc))
+    if crp: shown.append("CRP: " + str(crp))
+    if glu: shown.append("Glucose: " + str(glu))
 
     if shown:
         st.success(" · ".join(shown))
     else:
         st.info("입력한 수치가 없습니다. 값을 입력하면 요약이 나타납니다.")
 
-    # Food guide stub (월요일 업데이트 항목 반영 형태)
     st.markdown("#### 🍽️ 추천 음식 (데모)")
     recs = []
     if hb and hb < 10:
@@ -89,7 +95,7 @@ def _lab_section():
 
 def main():
     _load_css()
-    st.title("🩸 피수치 가이드 (v3.14-fixed)")
+    st.title("🩸 피수치 가이드 (v3.14-fixed2)")
     st.caption("모바일 최적화 · 입력한 수치만 표시 · 보고서 버튼 · 조회수 카운터")
 
     _show_counter()
@@ -100,4 +106,4 @@ def main():
     with tabs[1]:
         _drug_section()
 
-    st.markdown('<div class="footer">제작/자문: Hoya/GPT · v3.14-fixed</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">제작/자문: Hoya/GPT · v3.14-fixed2</div>', unsafe_allow_html=True)
