@@ -1,6 +1,6 @@
 
 import streamlit as st
-from .config import ORDER, EXPLAIN, ALIAS
+from bloodmap_app.config import ORDER, EXPLAIN, ALIAS
 from .interpret import interpret_blood_values
 from .foods import recommend_foods
 from .drugs import explain_drugs
