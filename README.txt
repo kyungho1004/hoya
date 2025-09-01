@@ -13,3 +13,4 @@ BloodMap v3.14 — 배포용 패키지 (모바일 줄꼬임 방지)
 PDF 폰트:
   - fonts/NanumGothic-Regular.ttf (필수)
   - fonts/NanumGothic-Bold.ttf / NanumGothic-ExtraBold.ttf (선택)
+Streamlit Cloud에서는 Main file path를 streamlit_app.py로 지정하세요.
