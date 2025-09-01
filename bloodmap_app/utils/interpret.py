@@ -3,11 +3,11 @@ from datetime import date
 import streamlit as st
 from xml.sax.saxutils import escape
 
-from ..config import (LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K,
+from config import (LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K,
                       LBL_Alb, LBL_Glu, LBL_TP, LBL_AST, LBL_ALT, LBL_LDH, LBL_CRP,
                       LBL_Cr, LBL_UA, LBL_TB, LBL_BUN, LBL_BNP, ORDER, FEVER_GUIDE)
-from ..data.foods import FOODS, FOODS_SEASONAL, RECIPE_LINKS
-from ..data.drugs import ANTICANCER, ABX_GUIDE
+from data.foods import FOODS, FOODS_SEASONAL, RECIPE_LINKS
+from data.drugs import ANTICANCER, ABX_GUIDE
 from .inputs import entered
 
 def _fmt(name, val):
@@ -138,7 +138,7 @@ def abx_summary(abx_dict):
         try: use=float(amt)
         except Exception: use=0.0
         if use>0:
-            from ..data.drugs import ABX_GUIDE
+            from data.drugs import ABX_GUIDE
             tip=", ".join(ABX_GUIDE.get(k, []))
             shown=f"{int(use)}" if float(use).is_integer() else f"{use:.1f}"
             lines.append(f"• {k}: {shown}  — 주의: {tip}")
