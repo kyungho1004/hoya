@@ -1,6 +1,2 @@
-
-/* 최소 스타일 - 모바일 최적화 */
-.block-container {max-width: 860px; padding-top: 1rem;}
-h1, h2, h3 {line-height: 1.25;}
-.small {font-size: 0.9rem; opacity: 0.9;}
-.warn {font-weight: 600;}
+/* minimal styles; mobile safe */
+.block-container{max-width:880px;padding-top:1rem}
