@@ -1,5 +1,5 @@
 
-import streamlit as st
+from bloodmap_app.streamlit_main import main
 
 def main():
     st.title("✅ 피수치 해석기 v3.14")
