@@ -1,4 +1,3 @@
-
 from bloodmap_app.streamlit_main import main
 
 def main():
