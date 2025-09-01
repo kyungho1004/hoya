@@ -1,2 +1,8 @@
-/* minimal styles; mobile safe */
-.block-container{max-width:880px;padding-top:1rem}
+
+/* Mobile-first tweaks */
+.block-container { padding-top: 1rem; padding-bottom: 3rem; }
+h1, h2, h3 { line-height: 1.25; }
+.small { font-size: 0.9rem; opacity: 0.85; }
+.badge { display: inline-block; padding: .2rem .5rem; border-radius: .6rem; border: 1px solid rgba(125,125,125,.3); }
+hr { margin: .8rem 0; }
+.footer { text-align:center; margin-top:1.2rem; opacity:.7; }
