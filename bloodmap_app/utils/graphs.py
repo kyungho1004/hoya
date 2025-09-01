@@ -5,7 +5,7 @@ def render_graphs():
     st.markdown("---")
     st.subheader("📈 별명별 추이 그래프 (WBC, Hb, PLT, CRP, ANC)")
     try:
-        import pandas as pd  # noqa
+        import pandas as pd
         HAS_PD = True
     except Exception:
         HAS_PD = False
@@ -19,7 +19,7 @@ def render_graphs():
         rows = st.session_state.records.get(sel, [])
         if rows:
             data = [ {"ts": r["ts"], **{k: r["labs"].get(k) for k in ["WBC(백혈구)", "Hb(적혈구)", "PLT(혈소판)", "CRP(염증수치)", "ANC(호중구,면역력)"]}} for r in rows ]
-            import pandas as pd  # local import
+            import pandas as pd
             df = pd.DataFrame(data).set_index("ts")
             st.line_chart(df.dropna(how="all"))
         else:
