@@ -1,0 +1,4 @@
+/* mobile-first, simple spacing */ 
+:root {--pad: 10px;}
+.block {padding: var(--pad); border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px;}
+.small {font-size: .9rem; opacity: .85;}
