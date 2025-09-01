@@ -1,3 +1,4 @@
+
 FOODS = {
     "Albumin_low": ["달걀","연두부","흰살 생선","닭가슴살","귀리죽"],
     "K_low": ["바나나","감자","호박죽","고구마","오렌지"],
@@ -14,7 +15,7 @@ FOODS_SEASONAL = {
 }
 
 RECIPE_LINKS = {
-    "달걀": "https://www.10000recipe.com/",
+    "달걀": "https://recipe1.ezmember.co.kr/",
     "연두부": "https://www.10000recipe.com/",
     "흰살 생선": "https://www.10000recipe.com/",
     "닭가슴살": "https://www.10000recipe.com/",
@@ -34,4 +35,23 @@ RECIPE_LINKS = {
     "오트밀죽": "https://www.10000recipe.com/",
     "삶은 감자": "https://www.10000recipe.com/",
     "연어 통조림": "https://www.10000recipe.com/",
+    "두릅": "https://www.10000recipe.com/",
+    "봄동": "https://www.10000recipe.com/",
+    "주꾸미": "https://www.10000recipe.com/",
+    "달래": "https://www.10000recipe.com/",
+    "쑥": "https://www.10000recipe.com/",
+    "오이": "https://www.10000recipe.com/",
+    "토마토": "https://www.10000recipe.com/",
+    "옥수수": "https://www.10000recipe.com/",
+    "참외": "https://www.10000recipe.com/",
+    "수박": "https://www.10000recipe.com/",
+    "버섯": "https://www.10000recipe.com/",
+    "고등어": "https://www.10000recipe.com/",
+    "전어": "https://www.10000recipe.com/",
+    "배": "https://www.10000recipe.com/",
+    "단호박": "https://www.10000recipe.com/",
+    "무": "https://www.10000recipe.com/",
+    "배추": "https://www.10000recipe.com/",
+    "굴": "https://www.10000recipe.com/",
+    "귤": "https://www.10000recipe.com/",
 }
