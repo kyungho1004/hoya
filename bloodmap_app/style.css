@@ -1,1 +1,3 @@
-.block-container{padding-top:1rem;padding-bottom:3rem}
+/* Minimal mobile-safe spacing */
+:root{--pad:8px}
+.block-container{padding-top:var(--pad)}
