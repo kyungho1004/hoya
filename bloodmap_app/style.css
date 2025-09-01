@@ -1,0 +1,9 @@
+/* Mobile-first tweaks */
+.block-container { padding-top: 1rem; padding-bottom: 2rem; }
+@media (max-width: 720px) {
+  .block-container { padding-left: 0.8rem; padding-right: 0.8rem; }
+  h1, h2, h3 { word-break: keep-all; }
+  .stTabs [data-baseweb="tab"] { font-size: 0.95rem; }
+}
+/* Inputs look tidy on small screens */
+.stNumberInput input { text-align: right; }
