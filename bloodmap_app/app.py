@@ -39,8 +39,15 @@ def _drug_section():
         keys = [k for k in ABX_GUIDE.keys() if q.lower() in k.lower()]
         for name in keys:
             with st.expander(f"• {name}", expanded=False):
-                st.write(ABX_GUIDE[name].get("설명",""))
-                st.warning(ABX_GUIDE[name].get("주의",""))
+                _v = ABX_GUIDE.get(name)
+                if isinstance(_v, dict):
+                    st.write(_v.get("설명", ""))
+                    st.warning(_v.get("주의", ""))
+                elif isinstance(_v, (list, tuple)):
+                    for it in _v:
+                        st.write(str(it))
+                else:
+                    st.write(str(_v))
 
 def main():
     """Streamlit entry point ensured for v3.14 packaging 규격"""
