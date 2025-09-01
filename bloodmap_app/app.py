@@ -1,1 +1,3 @@
-# app logic (예시용 빈 파일)
+def main():
+    import streamlit as st
+    st.title("피수치 가이드 실행 중")
