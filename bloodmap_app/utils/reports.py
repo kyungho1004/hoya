@@ -1,8 +1,9 @@
+
 from datetime import datetime
 import os
 from io import BytesIO
 
-from config import (ORDER, LBL_CRP, DISCLAIMER, FONT_PATH_REG, FONT_PATH_B, FONT_PATH_XB)
+from ..config import (ORDER, LBL_CRP, DISCLAIMER, FONT_PATH_REG, FONT_PATH_B, FONT_PATH_XB)
 
 def build_report(mode, meta, vals, compare_lines, extra_vals, meds_lines, food_lines, abx_lines):
     buf = [f"# BloodMap 보고서 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n",
