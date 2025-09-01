@@ -41,8 +41,8 @@ ORDER = [
     LBL_TB, LBL_BUN, LBL_BNP
 ]
 
-FONT_PATH_REG = "fonts/NanumGothic-Regular.ttf"
-FONT_PATH_B   = "fonts/NanumGothic-Bold.ttf"
-FONT_PATH_XB  = "fonts/NanumGothic-ExtraBold.ttf"
+FONT_PATH_REG = "bloodmap_app/fonts/NanumGothic-Regular.ttf"
+FONT_PATH_B   = "bloodmap_app/fonts/NanumGothic-Bold.ttf"
+FONT_PATH_XB  = "bloodmap_app/fonts/NanumGothic-ExtraBold.ttf"
 
 FEVER_GUIDE = "🌡️ 38.0~38.5℃ 해열제/경과, 38.5℃↑ 병원 연락, 39.0℃↑ 즉시 병원. (ANC<500 동반 발열=응급)"

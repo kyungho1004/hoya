@@ -3,19 +3,19 @@ from datetime import datetime, date
 import os
 import streamlit as st
 
-from config import (APP_TITLE, PAGE_TITLE, MADE_BY, CAFE_LINK_MD, FOOTER_CAFE,
+from .config import (APP_TITLE, PAGE_TITLE, MADE_BY, CAFE_LINK_MD, FOOTER_CAFE,
                     DISCLAIMER, ORDER, FEVER_GUIDE,
                     LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K,
                     LBL_Alb, LBL_Glu, LBL_TP, LBL_AST, LBL_ALT, LBL_LDH, LBL_CRP, LBL_Cr, LBL_UA, LBL_TB, LBL_BUN, LBL_BNP,
                     FONT_PATH_REG)
-from data.drugs import ANTICANCER, ABX_GUIDE
-from data.foods import FOODS
-from data.ped import PED_TOPICS, PED_INPUTS_INFO, PED_INFECT
-from utils.inputs import num_input_generic, entered, _parse_numeric
-from utils.interpret import interpret_labs, compare_with_previous, food_suggestions, summarize_meds, abx_summary
-from utils.reports import build_report, md_to_pdf_bytes_fontlocked
-from utils.graphs import render_graphs
-from utils.schedule import render_schedule
+from .data.drugs import ANTICANCER, ABX_GUIDE
+from .data.foods import FOODS
+from .data.ped import PED_TOPICS, PED_INPUTS_INFO, PED_INFECT
+from .utils.inputs import num_input_generic, entered, _parse_numeric
+from .utils.interpret import interpret_labs, compare_with_previous, food_suggestions, summarize_meds, abx_summary
+from .utils.reports import build_report, md_to_pdf_bytes_fontlocked
+from .utils.graphs import render_graphs
+from .utils.schedule import render_schedule
 
 try:
     import pandas as pd
@@ -64,33 +64,23 @@ with share_col3:
         st.metric("조회수", USAGE["page_views"])
         st.metric("해석 실행 수", USAGE["runs"])
         st.metric("보고서 다운로드", USAGE["downloads"])
-        try:
-            st.metric("별명 수", len(USAGE["unique_users"]))
-        except Exception:
-            pass
+        try: st.metric("별명 수", len(USAGE["unique_users"]))
+        except Exception: pass
 
-os.makedirs("fonts", exist_ok=True)
+os.makedirs("bloodmap_app/fonts", exist_ok=True)
 if "records" not in st.session_state: st.session_state.records = {}
 if "schedules" not in st.session_state: st.session_state.schedules = {}
 
-st.divider()
-st.header("1️⃣ 환자/암·소아 정보")
+st.divider(); st.header("1️⃣ 환자/암·소아 정보")
 
 c1, c2 = st.columns(2)
-with c1:
-    nickname = st.text_input("별명(저장/그래프/스케줄용)", placeholder="예: 홍길동")
-with c2:
-    test_date = st.date_input("검사 날짜", value=date.today())
-
+with c1: nickname = st.text_input("별명(저장/그래프/스케줄용)", placeholder="예: 홍길동")
+with c2: test_date = st.date_input("검사 날짜", value=date.today())
 anc_place = st.radio("현재 식사 장소(ANC 가이드용)", ["가정", "병원"], horizontal=True)
 
 mode = st.selectbox("모드 선택", ["일반/암", "소아(일상/호흡기)", "소아(감염질환)"])
 
-group = None
-cancer = None
-infect_sel = None
-ped_topic = None
-
+group = None; cancer = None; infect_sel = None; ped_topic = None
 if mode == "일반/암":
     group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암", "소아암", "희귀암"])
     if group == "혈액암":
@@ -126,10 +116,8 @@ else:
 
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
-meds = {}
-extras = {}
+meds = {}; extras = {}; vals = {}
 
-drug_list = []
 if mode == "일반/암":
     heme_by_cancer = {"AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF"],
                       "APL": ["ATRA","Idarubicin","Daunorubicin","ARA-C","G-CSF"],
@@ -143,6 +131,8 @@ if mode == "일반/암":
         "희귀암": ["Imatinib","Sunitinib","Regorafenib","Mitotane"]
     }
     drug_list = list(dict.fromkeys(default_drugs_by_group.get(group, [])))
+else:
+    drug_list = []
 
 drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list]
@@ -159,12 +149,11 @@ for d in selected_drugs:
         continue
     else:
         amt = num_input_generic(f"{d} ({alias}) - 용량/알약", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
-    if amt and float(amt)>0:
-        meds[d] = {"dose_or_tabs": amt}
+    if amt and float(amt)>0: meds[d] = {"dose_or_tabs": amt}
 
 st.markdown("### 🧪 항생제 선택 및 입력")
 extras["abx"] = {}
-abx_choices = list(__import__("data.drugs", fromlist=["ABX_GUIDE"]).ABX_GUIDE.keys())
+abx_choices = list(__import__("bloodmap_app.data.drugs", fromlist=["ABX_GUIDE"]).ABX_GUIDE.keys())
 selected_abx = st.multiselect("항생제 계열 선택", abx_choices, default=[])
 for abx in selected_abx:
     extras["abx"][abx] = num_input_generic(f"{abx} - 복용/주입량", key=f"abx_{abx}", decimals=1, placeholder="예: 1")
@@ -172,21 +161,14 @@ for abx in selected_abx:
 st.markdown("### 💧 동반 약물/상태")
 extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
-st.divider()
-st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
-vals = {}
-def render_inputs_vertical():
-    for name in __import__("config").config.ORDER if False else [
-        "WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","ANC(호중구,면역력)","Ca(칼슘)","P(인)","Na(나트륨)","K(포타슘)","Albumin(알부민)","Glucose(혈당)",
-        "Total Protein(총단백질)","AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","CRP(염증수치)","Cr(신장수치)","UA(요산수치)","TB(총빌리루빈)","BUN(신장수치)","BNP(심장척도)"
-    ]:
-        decimals = 2 if name=="CRP(염증수치)" else 1
-        vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=decimals, placeholder="")
+st.divider(); st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
 
-render_inputs_vertical()
+for name in ["WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","ANC(호중구,면역력)","Ca(칼슘)","P(인)","Na(나트륨)","K(포타슘)","Albumin(알부민)","Glucose(혈당)",
+             "Total Protein(총단백질)","AST(간수치)","ALT(간세포수치)","LDH(유산탈수효소)","CRP(염증수치)","Cr(신장수치)","UA(요산수치)","TB(총빌리루빈)","BUN(신장수치)","BNP(심장척도)"]:
+    decimals = 2 if name=="CRP(염증수치)" else 1
+    vals[name] = num_input_generic(f"{name}", key=f"v_{name}", decimals=decimals, placeholder="")
 
-st.divider()
-st.header("3️⃣ 항암 스케줄표")
+from .utils.schedule import render_schedule
 render_schedule(nickname)
 
 st.divider()
@@ -196,52 +178,31 @@ if run:
     st.subheader("📋 해석 결과")
     lines = interpret_labs(vals, extras)
     for line in lines: st.write(line)
-
     if nickname and "records" in st.session_state and st.session_state.records.get(nickname):
         st.markdown("### 🔍 수치 변화 비교 (이전 기록 대비)")
-        cmp_lines = compare_with_previous(nickname, {k: vals.get(k) for k in ["WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","ANC(호중구,면역력)","CRP(염증수치)"] if entered(vals.get(k))})
+        cmp_lines = compare_with_previous(nickname, {k: vals.get(k) for k in ["WBC(백혈구)","Hb(적혈구)","PLT(혈소판)","CRP(염증수치)","ANC(호중구,면역력)"] if entered(vals.get(k))})
         for l in cmp_lines: st.write(l)
-
-    fs = food_suggestions(vals, anc_place)
+    fs = food_suggestions(vals, "가정")
     if fs:
         st.markdown("### 🥗 음식 가이드 (계절/레시피 포함)")
         for f in fs: st.markdown(f)
-
     if meds:
         st.markdown("### 💊 항암제 부작용·상호작용 요약")
         for line in summarize_meds(meds): st.write(line)
-
     if extras.get("abx"):
         abx_lines = abx_summary(extras["abx"])
         if abx_lines:
             st.markdown("### 🧪 항생제 주의 요약")
             for l in abx_lines: st.write(l)
-
-    st.markdown("### 🌡️ 발열 가이드")
-    st.write(FEVER_GUIDE)
-
-    meta = {"group": group, "cancer": cancer, "anc_place": anc_place}
+    st.markdown("### 🌡️ 발열 가이드"); from .config import FEVER_GUIDE as FG; st.write(FG)
+    meta = {"group": group, "cancer": cancer, "anc_place": "가정"}
     report_md = build_report("일반/암", meta, vals, [], {}, [], fs, abx_summary(extras.get("abx", {})))
-
     clicked_md = st.download_button("📥 보고서(.md) 다운로드", data=report_md.encode("utf-8"),
                        file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                        mime="text/markdown")
     if clicked_md: record_download()
 
-    try:
-        pdf_bytes = md_to_pdf_bytes_fontlocked(report_md)
-        clicked_pdf = st.download_button("🖨️ 보고서(.pdf) 다운로드", data=pdf_bytes,
-                           file_name=f"bloodmap_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                           mime="application/pdf")
-        if clicked_pdf: record_download()
-    except Exception as e:
-        st.info("PDF 모듈 또는 폰트가 준비되면 PDF 생성이 활성화됩니다.")
-
-    if nickname and nickname.strip():
-        rec = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "labs": {k: vals.get(k) for k in vals if entered(vals.get(k))}}
-        st.session_state.records.setdefault(nickname, []).append(rec)
-        st.success("저장되었습니다. 아래 그래프에서 추이를 확인하세요.")
-
-render_graphs()
-st.caption(FOOTER_CAFE)
-st.markdown("> " + DISCLAIMER)
+def main():
+    # 앱은 import 시점에 바로 렌더되므로 여기서는 별도 로직이 필요 없습니다.
+    # Streamlit Cloud가 `from bloodmap_app.app import main`을 호출해도 안전하도록 빈 main 제공.
+    return
