@@ -1,4 +1,6 @@
-/* mobile-first, simple spacing */ 
-:root {--pad: 10px;}
-.block {padding: var(--pad); border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px;}
-.small {font-size: .9rem; opacity: .85;}
+
+/* 최소 스타일 - 모바일 최적화 */
+.block-container {max-width: 860px; padding-top: 1rem;}
+h1, h2, h3 {line-height: 1.25;}
+.small {font-size: 0.9rem; opacity: 0.9;}
+.warn {font-weight: 600;}
