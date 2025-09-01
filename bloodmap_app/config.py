@@ -1,9 +1,10 @@
 
 from datetime import date
 
-APP_TITLE = "🩸 피수치 가이드  (v3.13 · 변화비교 · 스케줄표 · 계절 식재료 · ANC 장소별 가이드)"
-PAGE_TITLE = "피수치 가이드 by Hoya (v3.13 · 변화비교/스케줄/계절식/ANC장소)"
-MADE_BY = "👤 **제작자: Hoya / 자문: 호야/GPT** · 📅 {} 기준".format(date.today().isoformat())
+APP_VERSION = "v3.14"
+APP_TITLE = f"🩸 피수치 가이드  ({APP_VERSION} · 변화비교 · 스케줄표 · 계절 식재료 · ANC 장소별 가이드 · 조회수)"
+PAGE_TITLE = f"피수치 가이드 by Hoya ({APP_VERSION} · 변화비교/스케줄/계절식/ANC장소/조회수)"
+MADE_BY = "👤 **제작자: Hoya / 자문: Hoya/GPT** · 📅 {} 기준".format(date.today().isoformat())
 CAFE_LINK_MD = "[📌 **피수치 가이드 공식카페 바로가기**](https://cafe.naver.com/bloodmap)"
 FOOTER_CAFE = "📱 직접 타이핑 입력 / 모바일 줄꼬임 방지 / 암별·소아·희귀암 패널 + 감염질환 표 포함. 공식카페: https://cafe.naver.com/bloodmap"
 
@@ -13,7 +14,6 @@ DISCLAIMER = (
     "개발자는 이에 대한 판단·조치에 일절 관여하지 않으며, 책임지지 않습니다."
 )
 
-# ===== Label constants (Korean-friendly) =====
 LBL_WBC = "WBC(백혈구)"
 LBL_Hb = "Hb(적혈구)"
 LBL_PLT = "PLT(혈소판)"
