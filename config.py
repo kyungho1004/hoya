@@ -1,3 +1,4 @@
+
 from datetime import date
 
 APP_TITLE = "🩸 피수치 가이드  (v3.13 · 변화비교 · 스케줄표 · 계절 식재료 · ANC 장소별 가이드)"
