@@ -1,29 +1,26 @@
 
-import streamlit as st
+# -*- coding: utf-8 -*-
+try:
+    import streamlit as st
+except Exception:
+    class _Dummy:  # smoke-test fallback
+        def __getattr__(self, k):
+            def _f(*a, **kw): return None
+            return _f
+    st = _Dummy()
 
-def _parse_numeric(text, default=0.0, as_int=False, decimals=None):
-    if text is None:
-        return default
-    s = str(text).strip()
-    if s == "":
-        return default
-    s = s.replace(",", "")
+def _parse_numeric(raw, decimals=1):
     try:
-        v = float(s)
-        if as_int:
-            return int(v)
-        if decimals is not None:
-            return float(f"{v:.{decimals}f}")
-        return v
+        v = float(str(raw).strip())
+        if decimals == 0: return int(round(v))
+        return float(f"{v:.{decimals}f}")
     except Exception:
-        return default
+        return None
 
-def num_input_generic(label, key, placeholder="", as_int=False, decimals=None):
-    raw = st.text_input(label, key=key, placeholder=placeholder, label_visibility="visible")
-    return _parse_numeric(raw, as_int=as_int, decimals=decimals)
+def num_input_generic(label, key, decimals=1, placeholder="", as_int=False):
+    raw = st.text_input(label, key=key, placeholder=placeholder)
+    return _parse_numeric(raw, decimals=0 if as_int else decimals)
 
 def entered(v):
-    try:
-        return v is not None and float(v) != 0
-    except Exception:
-        return False
+    try: return v is not None and str(v) != "" and float(v) == float(v)
+    except Exception: return v not in (None, "", [])
