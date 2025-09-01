@@ -2,7 +2,6 @@ from datetime import datetime, date
 import os
 import streamlit as st
 
-# local modules
 from config import (APP_TITLE, PAGE_TITLE, MADE_BY, CAFE_LINK_MD, FOOTER_CAFE,
                     DISCLAIMER, ORDER, FEVER_GUIDE,
                     LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K,
@@ -17,7 +16,6 @@ from utils.reports import build_report, md_to_pdf_bytes_fontlocked
 from utils.graphs import render_graphs
 from utils.schedule import render_schedule
 
-# ===== Optional deps =====
 try:
     import pandas as pd
     HAS_PD = True
@@ -37,7 +35,6 @@ if "records" not in st.session_state:
 if "schedules" not in st.session_state:
     st.session_state.schedules = {}
 
-# ===== UI 1) Patient / Mode =====
 st.divider()
 st.header("1️⃣ 환자/암·소아 정보")
 
@@ -56,6 +53,7 @@ cancer = None
 infect_sel = None
 ped_topic = None
 
+# ---- IF BLOCK START (keep syntax simple) ----
 if mode == "일반/암":
     group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암", "소아암", "희귀암"])
     if group == "혈액암":
@@ -97,16 +95,15 @@ else:
         st.write(f"- 핵심: {PED_INFECT[infect_sel].get('핵심','')}")
         st.write(f"- 진단: {PED_INFECT[infect_sel].get('진단','')}")
         st.write(f"- 특징: {PED_INFECT[infect_sel].get('특징','')}")
+# ---- IF BLOCK END ----
 
 table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
 
-# ===== Drugs & extras =====
 meds = {}
 extras = {}
 
 if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     st.markdown("### 💊 항암제 선택 및 입력")
-
     heme_by_cancer = {
         "AML": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide",
                 "Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF"],
@@ -117,7 +114,7 @@ if mode == "일반/암" and group and group != "미선택/일반" and cancer:
     }
     solid_by_cancer = {
         "폐암(Lung cancer)": ["Cisplatin","Carboplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed",
-                           "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab","Pembrolizumab","Nivolumab"],
+                              "Gefitinib","Erlotinib","Osimertinib","Alectinib","Bevacizumab","Pembrolizumab","Nivolumab"],
         "유방암(Breast cancer)": ["Doxorubicin","Cyclophosphamide","Paclitaxel","Docetaxel","Trastuzumab","Bevacizumab"],
         "위암(Gastric cancer)": ["Cisplatin","Oxaliplatin","5-FU","Capecitabine","Paclitaxel","Trastuzumab","Pembrolizumab"],
         "대장암(Cololoractal cancer)": ["5-FU","Capecitabine","Oxaliplatin","Irinotecan","Bevacizumab"],
@@ -161,7 +158,6 @@ drug_search = st.text_input("🔍 항암제 검색", key="drug_search")
 drug_choices = [d for d in drug_list if not drug_search or drug_search.lower() in d.lower() or drug_search.lower() in ANTICANCER.get(d,{}).get("alias","").lower()]
 selected_drugs = st.multiselect("항암제 선택", drug_choices, default=[])
 
-meds = {}
 for d in selected_drugs:
     alias = ANTICANCER.get(d,{}).get("alias","")
     if d == "ATRA":
@@ -188,7 +184,6 @@ for abx in selected_abx:
 st.markdown("### 💧 동반 약물/상태")
 extras["diuretic_amt"] = num_input_generic("이뇨제(복용량/회/일)", key="diuretic_amt", decimals=1, placeholder="예: 1")
 
-# ===== UI 2) Inputs =====
 st.divider()
 if mode == "일반/암":
     st.header("2️⃣ 기본 혈액 검사 수치 (입력한 값만 해석)")
@@ -248,7 +243,6 @@ elif mode == "소아(일상/호흡기)":
     nasal_flaring= _parse_num_ped("콧벌렁임(0/1)", key="ped_nf", decimals=0, placeholder="0 또는 1")
     apnea        = _parse_num_ped("무호흡(0/1)", key="ped_ap", decimals=0, placeholder="0 또는 1")
 
-# ===== UI 3) Extras =====
 extra_vals = {}
 def ped_risk_banner(age_m, temp_c, rr, spo2, urine_24h, retraction, nasal_flaring, apnea):
     danger=False; urgent=False; notes=[]
@@ -298,11 +292,8 @@ else:
     st.header("3️⃣ 감염질환 요약")
     st.info("표는 위 선택창에서 자동 생성됩니다.")
 
-# ===== Schedule =====
-from utils.schedule import render_schedule as _render_schedule
-_render_schedule(nickname)
+render_schedule(nickname)
 
-# ===== Run =====
 st.divider()
 run = st.button("🔎 해석하기", use_container_width=True)
 
@@ -349,7 +340,6 @@ if run:
     st.markdown("### 🌡️ 발열 가이드")
     st.write(FEVER_GUIDE)
 
-    # --- Build report text ---
     meta = {
         "group": group, "cancer": cancer, "infect_sel": infect_sel, "anc_place": anc_place,
         "ped_topic": ped_topic,
@@ -414,99 +404,6 @@ if run:
     else:
         st.info("별명을 입력하면 추이 그래프를 사용할 수 있어요.")
 
-# ===== Graphs =====
 render_graphs()
-
-st.markdown("---")
-st.header("📚 약물 사전 (스크롤 최소화 뷰어)")
-with st.expander("열기 / 닫기", expanded=False):
-    st.caption("빠르게 찾아보고 싶은 약을 검색하세요. 결과는 페이지로 나눠서 보여줍니다.")
-    view_tab1, view_tab2 = st.tabs(["항암제 사전", "항생제 사전"])
-
-    # 항암제 사전
-    with view_tab1:
-        ac_rows = []
-        for k, v in ANTICANCER.items():
-            alias = v.get("alias","")
-            aes = ", ".join(v.get("aes", []))
-            tags = []
-            key = k.lower()
-            if any(x in key for x in ["mab","nib","pembro","nivo","tuzu","zumab"]):
-                tags.append("표적/면역")
-            if k in ["Imatinib","Dasatinib","Nilotinib","Sunitinib","Pazopanib","Regorafenib","Lenvatinib","Sorafenib"]:
-                tags.append("TKI")
-            if k in ["Pembrolizumab","Nivolumab","Trastuzumab","Bevacizumab"]:
-                tags.append("면역/항체")
-            ac_rows.append({"약물": k, "한글명": alias, "부작용": aes, "태그": ", ".join(tags)})
-        try:
-            import pandas as pd
-            ac_df = pd.DataFrame(ac_rows)
-        except Exception:
-            ac_df = None
-        q = st.text_input("🔎 약물명/한글명/부작용/태그 검색", key="drug_search_ac", placeholder="예: MTX, 간독성, 면역, TKI ...")
-        page_size = st.selectbox("페이지 크기", [5, 10, 15, 20], index=1, key="ac_page_size")
-        if ac_df is not None:
-            fdf = ac_df.copy()
-            if q:
-                ql = q.strip().lower()
-                mask = (
-                    fdf["약물"].str.lower().str.contains(ql) |
-                    fdf["한글명"].str.lower().str.contains(ql) |
-                    fdf["부작용"].str.lower().str.contains(ql) |
-                    fdf["태그"].str.lower().str.contains(ql)
-                )
-                fdf = fdf[mask]
-            total = len(fdf)
-            st.caption(f"검색 결과: {total}건")
-            if total == 0:
-                st.info("검색 결과가 없습니다.")
-            else:
-                max_page = (total - 1) // page_size + 1
-                cur_page = st.number_input("페이지", min_value=1, max_value=max_page, value=1, step=1, key="ac_page")
-                start = (cur_page - 1) * page_size
-                end = start + page_size
-                show_df = fdf.iloc[start:end]
-                for _, row in show_df.iterrows():
-                    with st.container(border=True):
-                        st.markdown(f"**{row['약물']}** · {row['한글명']}")
-                        st.caption(f"태그: {row['태그'] if row['태그'] else '—'}")
-                        st.write("부작용: " + (row["부작용"] if row["부작용"] else "—"))
-        else:
-            st.info("pandas 설치 시 검색/페이지 기능이 활성화됩니다.")
-
-    # 항생제 사전
-    with view_tab2:
-        abx_rows = [{"계열": cat, "주의사항": ", ".join(tips)} for cat, tips in ABX_GUIDE.items()]
-        try:
-            import pandas as pd
-            abx_df = pd.DataFrame(abx_rows)
-        except Exception:
-            abx_df = None
-        q2 = st.text_input("🔎 계열/주의사항 검색", key="drug_search_abx", placeholder="예: QT, 광과민, 와파린 ...")
-        page_size2 = st.selectbox("페이지 크기", [5, 10, 15, 20], index=1, key="abx_page_size")
-        if abx_df is not None:
-            fdf2 = abx_df.copy()
-            if q2:
-                ql2 = q2.strip().lower()
-                mask2 = (
-                    fdf2["계열"].str.lower().str.contains(ql2) |
-                    fdf2["주의사항"].str.lower().str.contains(ql2)
-                )
-                fdf2 = fdf2[mask2]
-            total2 = len(fdf2)
-            st.caption(f"검색 결과: {total2}건")
-            if total2 == 0:
-                st.info("검색 결과가 없습니다.")
-            else:
-                max_page2 = (total2 - 1) // page_size2 + 1
-                cur_page2 = st.number_input("페이지", min_value=1, max_value=max_page2, value=1, step=1, key="abx_page")
-                start2 = (cur_page2 - 1) * page_size2
-                end2 = start2 + page_size2
-                show_df2 = fdf2.iloc[start2:end2]
-                for _, row in show_df2.iterrows():
-                    with st.container(border=True):
-                        st.markdown(f"**{row['계열']}**")
-                        st.write("주의사항: " + (row["주의사항"] if row["주의사항"] else "—"))
-
 st.caption(FOOTER_CAFE)
 st.markdown("> " + DISCLAIMER)
