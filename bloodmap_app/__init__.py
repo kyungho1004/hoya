@@ -1,1 +1,1 @@
-# init
+from .app import main
