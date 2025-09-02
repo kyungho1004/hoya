@@ -26,19 +26,19 @@ def main():
         HAS_PD = True
     except Exception:
         HAS_PD = False
-    
-    st.set_page_config(page_title=PAGE_TITLE, layout="centered")
-    st.title(APP_TITLE)
-    st.markdown(MADE_BY)
+   def main():
+    ...
     st.markdown(CAFE_LINK_MD)
-st.markdown("### 🔗 공유하기")
-c1, c2, c3 = st.columns([1,1,2])
-with c1:
-    st.link_button(" 카카오톡/메신저", "https://hdzwo5ginueir7hknzzfg4.streamlit.app/")
-with c2:
-    st.link_button(" 카페/블로그", "https://cafe.naver.com/bloodmap")
-with c3:
-    st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
+    st.markdown("### 🔗 공유하기")
+    c1, c2, c3 = st.columns([1, 1, 2])
+    with c1:
+        st.link_button("📱 카카오톡/메신저", "https://hdzwo5ginueir7hknzzfg4.streamlit.app/")
+    with c2:
+        st.link_button("📝 카페/블로그", "https://cafe.naver.com/bloodmap")
+    with c3:
+        st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
+    ...
+
 
 
 
