@@ -1,4 +1,5 @@
 def main():
+
     
     from datetime import datetime, date
     import os
@@ -30,7 +31,6 @@ def main():
     st.title(APP_TITLE)
     st.markdown(MADE_BY)
     st.markdown(CAFE_LINK_MD)
-
 st.markdown("### 🔗 공유하기")
 c1, c2, c3 = st.columns([1,1,2])
 with c1:
@@ -39,6 +39,8 @@ with c2:
     st.link_button("📝 카페/블로그", "https://cafe.naver.com/bloodmap")
 with c3:
     st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
+
+
 
     st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교 · 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
     
@@ -529,44 +531,3 @@ with c3:
     
     st.caption(FOOTER_CAFE)
     st.markdown("> " + DISCLAIMER)
-
-
-# === 병원 전용/복합제 항생제 처리 (자유 입력 + 공통 주의) ===
-with st.expander("🧪 병원 전용/복합제 항생제 입력 (자유기입)", expanded=False):
-    abx_enable = st.toggle("병원 전용/복합제 입력 사용", value=False, key="abx_custom_toggle")
-    if abx_enable:
-        from .data.abx_guide import match_exact, match_keyword, CLASS_NOTICE, normalize
-        from .utils.counter import log_event
-        abx_name = st.text_input("항생제 이름 또는 조합", placeholder="예: piperacillin/tazobactam 4.5g q8h", key="abx_custom_name")
-        if abx_name:
-            nm = normalize(abx_name)
-            m1 = match_exact(nm)
-            m2 = match_keyword(nm) if not m1 else None
-            if m1:
-                ent = m1["entry"]
-                st.success(f"정확 매칭: {abx_name} ({ent.get('alias','')})")
-                cls = ent.get("class")
-                if cls and cls in CLASS_NOTICE:
-                    st.markdown("**⚠️ 클래스 공통 주의**")
-                    for it in CLASS_NOTICE[cls]:
-                        st.write(f"- {it}")
-                if ent.get("notes"):
-                    st.markdown("**참고(노트)**")
-                    for it in ent["notes"]:
-                        st.write(f"- {it}")
-            elif m2:
-                cls = m2.get("class")
-                st.warning(f"직접 매칭은 없지만 키워드로 {cls} 계열로 추정됩니다.")
-                if cls and cls in CLASS_NOTICE:
-                    st.markdown("**⚠️ 클래스 공통 주의**")
-                    for it in CLASS_NOTICE[cls]:
-                        st.write(f"- {it}")
-                log_event("abx_unknown", nm)
-            else:
-                st.info("사전에 없는 병원 전용/복합제입니다. 아래 공통 안전수칙만 참고하세요.")
-                st.markdown("**⚠️ 공통 안전수칙(정보용)**")
-                st.write("- 과민반응(호흡곤란/전신두드러기/의식저하) 의심 시 즉시 중단 및 119/응급실")
-                st.write("- 심한 설사/혈변, 심한 흉통/호흡곤란, 실신감 등은 즉시 의료진 연락")
-                st.write("- 복용 중인 다른 약과의 상호작용은 반드시 주치의/약사와 상의")
-                log_event("abx_unknown", nm)
-
