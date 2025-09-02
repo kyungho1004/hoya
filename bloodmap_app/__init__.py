@@ -1,1 +1,1 @@
-# bloodmap_app package
+# pkg
