@@ -1,2 +1,4 @@
-/* mobile-safe */
-.block-container{padding-top:8px}
+/* mobile-safe tweaks */
+.block-container{padding-top:10px}
+h1,h2,h3{line-height:1.2}
+.stButton>button{height:42px}
