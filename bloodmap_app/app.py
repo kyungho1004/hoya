@@ -113,8 +113,6 @@ def main():
             st.write(f"- 진단: {PED_INFECT[infect_sel].get('진단','')}")
             st.write(f"- 특징: {PED_INFECT[infect_sel].get('특징','')}")
 
-    table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
-
     meds = {}
     extras = {}
 
@@ -214,7 +212,7 @@ def main():
         else:
             return num_input_generic(f"{name}", key=f"{keyprefix}{name}", decimals=1, placeholder="예: 3.5")
 
-    table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", help="모바일은 세로형 고정 → 줄꼬임 없음.")
+    table_mode = st.checkbox("⚙️ PC용 표 모드(가로형)", key="table_mode_main", help="모바일은 세로형 고정 → 줄꼬임 없음.")
     if table_mode:
         left, right = st.columns(2)
         half = (len(ORDER)+1)//2
