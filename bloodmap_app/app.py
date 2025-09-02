@@ -1,4 +1,4 @@
-# bloodmap_app/app.py — fixed (share block inside main, typo fixed)
+# bloodmap_app/app.py — one-shot patched (공유하기 main() 내부 + guard)
 def main():
     from datetime import datetime, date
     import os
@@ -36,12 +36,11 @@ def main():
         st.link_button("📝 카페/블로그", "https://cafe.naver.com/bloodmap")
     with c3:
         st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
-
-        st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교 · 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
+    st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 · PDF 한글 폰트 고정 · 수치 변화 비교 · 항암 스케줄표 · 계절 식재료/레시피 · ANC 병원/가정 구분")
 
     os.makedirs("fonts", exist_ok=True)
-    from .utils import counter as _bm_counter
     try:
+        from .utils import counter as _bm_counter
         _bm_counter.bump()
         st.caption(f"👀 조회수(방문): {_bm_counter.count()}")
     except Exception:
@@ -90,10 +89,12 @@ def main():
             st.info("암 그룹을 선택하면 해당 암종에 맞는 **항암제 목록과 추가 수치 패널**이 자동 노출됩니다.")
     elif mode == "소아(일상/호흡기)":
         st.markdown("### 🧒 소아 일상 주제 선택")
+        from .data.ped import PED_INPUTS_INFO, PED_TOPICS
         st.caption(PED_INPUTS_INFO)
         ped_topic = st.selectbox("소아 주제", PED_TOPICS)
     else:
         st.markdown("### 🧫 소아·영유아 감염질환")
+        from .data.ped import PED_INFECT
         infect_sel = st.selectbox("질환 선택", list(PED_INFECT.keys()))
         try:
             import pandas as pd
@@ -175,10 +176,13 @@ def main():
         elif d == "ARA-C":
             ara_form = st.selectbox(f"{d} ({alias}) - 제형", ["정맥(IV)","피하(SC)","고용량(HDAC)"], key=f"ara_form_{d}")
             amt = num_input_generic(f"{d} ({alias}) - 용량/일", key=f"med_{d}", decimals=1, placeholder="예: 100")
-            if amt>0: meds[d] = {"form": ara_form, "dose": amt}; continue
+            if amt>0:
+                meds[d] = {"form": ara_form, "dose": amt}
+            continue
         else:
             amt = num_input_generic(f"{d} ({alias}) - 용량/알약", key=f"med_{d}", decimals=1, placeholder="예: 1.5")
-        if amt and float(amt)>0: meds[d] = {"dose_or_tabs": amt}
+        if amt and float(amt)>0:
+            meds[d] = {"dose_or_tabs": amt}
 
     st.markdown("### 🧪 항생제 선택 및 입력")
     extras["abx"] = {}
@@ -232,8 +236,10 @@ def main():
                     vals[name] = num_input_generic(f"{name}", key=f"r_{name}", decimals=1, placeholder="예: 3.5")
 
     if mode == "일반/암":
-        if table_mode: render_inputs_table()
-        else: render_inputs_vertical()
+        if table_mode:
+            render_inputs_table()
+        else:
+            render_inputs_vertical()
     elif mode == "소아(일상/호흡기)":
         def _parse_num_ped(label, key, decimals=1, placeholder=""):
             raw = st.text_input(label, key=key, placeholder=placeholder)
@@ -344,7 +350,7 @@ def main():
 
         meta = {"group": group, "cancer": cancer, "infect_sel": infect_sel, "anc_place": anc_place, "ped_topic": ped_topic}
         if mode == "소아(일상/호흡기)":
-            def _ent(x): 
+            def _ent(x):
                 try: return x is not None and float(x)!=0
                 except: return False
             meta["ped_inputs"] = {}
@@ -357,6 +363,7 @@ def main():
             if _ent(nasal_flaring): meta["ped_inputs"]["콧벌렁임"] = int(nasal_flaring)
             if _ent(apnea): meta["ped_inputs"]["무호흡"] = int(apnea)
         elif mode == "소아(감염질환)":
+            from .data.ped import PED_INFECT
             info = PED_INFECT.get(infect_sel, {})
             meta["infect_info"] = {"핵심": info.get("핵심",""), "진단": info.get("진단",""), "특징": info.get("특징","")}
 
@@ -461,3 +468,6 @@ def main():
 
     st.caption(FOOTER_CAFE)
     st.markdown('> ' + DISCLAIMER)
+
+if __name__ == "__main__":
+    main()
