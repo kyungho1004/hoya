@@ -2,16 +2,18 @@
 import streamlit as st
 
 def render_schedule(nickname: str):
-    st.markdown("### 🗓️ 항암 스케줄/메모")
+    st.header("🗓️ 스케줄")
     if not nickname:
-        st.caption("별명을 입력하면 스케줄을 저장할 수 있어요.")
+        st.info("별명을 입력하면 스케줄을 저장할 수 있어요.")
         return
-    if "schedules" not in st.session_state:
-        st.session_state.schedules = {}
-    sched = st.session_state.schedules.setdefault(nickname, [])
-    note = st.text_input("메모/스케줄 입력", key=f"sched_{nickname}")
-    if st.button("추가", key=f"sched_add_{nickname}") and note.strip():
-        sched.append({"text": note.strip()})
-    if sched:
-        for i, item in enumerate(sched, 1):
-            st.write(f"{i}. {item['text']}")
+    sch = st.session_state.setdefault("schedules", {}).setdefault(nickname, [])
+    with st.form(key="sch_form", clear_on_submit=True):
+        date = st.date_input("날짜")
+        note = st.text_input("메모", placeholder="예: 외래/CT/항암 D1")
+        submitted = st.form_submit_button("추가")
+    if submitted and note:
+        sch.append({"date": str(date), "note": note})
+        st.success("추가됨")
+    if sch:
+        for item in sch[-10:]:
+            st.write(f"- {item['date']}: {item['note']}")

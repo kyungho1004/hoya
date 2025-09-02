@@ -1,23 +1,21 @@
 
 import os, json
+COUNTER_FILE = "counter.json"
 
-_PATH = "visit_counter.json"
+def _read():
+    if not os.path.exists(COUNTER_FILE):
+        return {"count": 0}
+    try:
+        return json.load(open(COUNTER_FILE, "r"))
+    except Exception:
+        return {"count": 0}
+
+def _write(d):
+    with open(COUNTER_FILE, "w") as f:
+        json.dump(d, f)
 
 def bump():
-    data = {"count": 0}
-    if os.path.exists(_PATH):
-        try:
-            data = json.load(open(_PATH, "r"))
-        except Exception:
-            data = {"count": 0}
-    data["count"] = int(data.get("count", 0)) + 1
-    json.dump(data, open(_PATH, "w"))
-    return data["count"]
+    d=_read(); d["count"]=d.get("count",0)+1; _write(d)
 
 def count():
-    if os.path.exists(_PATH):
-        try:
-            return int(json.load(open(_PATH, "r")).get("count", 0))
-        except Exception:
-            return 0
-    return 0
+    return _read().get("count", 0)

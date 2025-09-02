@@ -1,32 +1,26 @@
 
 import streamlit as st
-from ..config import (LBL_WBC, LBL_Hb, LBL_PLT, LBL_CRP, LBL_ANC)
 
 def render_graphs():
-    st.divider()
-    st.header("📈 추이 그래프 (별명별)")
+    st.header("📈 추이 그래프")
+    recs = (st.session_state.get("records") or {})
+    if not recs:
+        st.info("저장된 기록이 없어요. 별명 입력 후 해석하면 자동 저장됩니다.")
+        return
     nickname = st.text_input("그래프 볼 별명", key="graph_nick", placeholder="예: 홍길동")
-    if not nickname:
-        st.info("별명을 입력하면 저장된 기록으로 그래프를 볼 수 있어요.")
+    if not nickname or nickname not in recs:
+        st.caption("별명에 저장된 기록이 없거나 미입력.")
         return
-    records = (st.session_state.get("records") or {}).get(nickname, [])
-    if not records:
-        st.info("해당 별명으로 저장된 기록이 없습니다.")
-        return
-    # 간단 라인 그래프
-    import pandas as pd
-    rows = []
-    for rec in records:
-        dt = rec.get("ts")
-        labs = rec.get("labs", {})
-        rows.append({
-            "ts": dt,
-            LBL_WBC: labs.get(LBL_WBC),
-            LBL_Hb: labs.get(LBL_Hb),
-            LBL_PLT: labs.get(LBL_PLT),
-            LBL_CRP: labs.get(LBL_CRP),
-            LBL_ANC: labs.get(LBL_ANC),
-        })
-    df = pd.DataFrame(rows).set_index("ts")
-    st.line_chart(df[[LBL_WBC, LBL_ANC]].dropna(how="all"))
-    st.line_chart(df[[LBL_Hb, LBL_PLT, LBL_CRP]].dropna(how="all"))
+    # Build simple time series for 주요 항목
+    keys = ["WBC","Hb","PLT","CRP","ANC"]
+    series = {k: [] for k in keys}
+    for r in recs[nickname]:
+        labs = r.get("labs") or {}
+        for k in keys:
+            v = labs.get(k)
+            series[k].append(float(v) if v is not None else None)
+    for k in keys:
+        vals = [v for v in series[k] if v is not None]
+        if vals:
+            st.line_chart(vals, height=160, use_container_width=True)
+            st.caption(f"{k} 추이(최근 {len(vals)}회)")

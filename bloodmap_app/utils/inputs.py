@@ -2,13 +2,13 @@
 import streamlit as st
 
 def _parse_numeric(raw, decimals=1):
-    if raw is None or raw == "":
+    if raw is None or str(raw).strip() == "":
         return None
+    s = str(raw).replace(",", "").strip()
     try:
-        v = float(str(raw).strip())
-        if decimals is not None:
-            return round(v, decimals)
-        return v
+        if decimals == 0:
+            return int(float(s))
+        return round(float(s), decimals)
     except Exception:
         return None
 
@@ -19,6 +19,6 @@ def num_input_generic(label, key=None, decimals=1, placeholder="", as_int=False)
 
 def entered(x):
     try:
-        return x is not None and str(x).strip() != "" and float(x) == float(x)
+        return x is not None and str(x) != "" and float(x) == float(x)
     except Exception:
         return False
