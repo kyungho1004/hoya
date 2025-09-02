@@ -17,4 +17,4 @@ LBL_Cr="Cr (신장수치)"; LBL_UA="Uric Acid (요산수치)"; LBL_TB="Total Bil
 ORDER = [LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC, LBL_Ca, LBL_P, LBL_Na, LBL_K, LBL_Alb,
          LBL_Glu, LBL_TP, LBL_AST, LBL_ALT, LBL_LDH, LBL_CRP, LBL_Cr, LBL_UA, LBL_TB, LBL_BUN, LBL_BNP]
 
-FONT_PATH_REG = "fonts/NanumGothic.ttf"
+FONT_PATH_REG = "fonts/NanumGothic-Regular.ttf"
