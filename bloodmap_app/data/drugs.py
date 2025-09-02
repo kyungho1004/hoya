@@ -1,23 +1,23 @@
-
-ANTICANCER = {
-    "Imatinib": {"alias":"글리벡","category":"CML","aes":["부종","근육통","피로"]},
-    "Dasatinib": {"alias":"스프라이셀","category":"CML","aes":["혈소판감소","흉막삼출","호흡곤란"]},
-    "Nilotinib": {"alias":"타시그나","category":"CML","aes":["QT연장","고혈당","간수치상승"]},
-    "Gefitinib": {"alias":"이레사","category":"폐암(EGFR)","aes":["피부발진","설사","간수치상승"]},
-    "Osimertinib": {"alias":"타그리소","category":"폐암(EGFR)","aes":["QT연장","심근염 드묾","설사"]},
-    "Trastuzumab": {"alias":"허셉틴","category":"유방암(HER2)","aes":["심기능저하","주입반응"]},
-    "Bevacizumab": {"alias":"아바스틴","category":"고형암(혈관)","aes":["출혈","고혈압","상처치유지연"]},
+ANTICANCER={
+    "ATRA":{"alias":"베사노이드","aes":["분화증후군","두통","피부건조"]},
+    "ARA-C":{"alias":"시아라빈","aes":["골수억제","발열"]},
+    "MTX":{"alias":"메토트렉세이트","aes":["간독성","구내염"]},
+    "G-CSF":{"alias":"그라신","aes":["골통","발열"]},
+    "Cisplatin":{"alias":"시스플라틴","aes":["구토","신독성"]},
+    "Carboplatin":{"alias":"카보플라틴","aes":["골수억제"]},
+    "Paclitaxel":{"alias":"파클리탁셀","aes":["신경병증","탈모"]},
+    "Docetaxel":{"alias":"도세탁셀","aes":["무과립구증","부종"]},
+    "Gemcitabine":{"alias":"젬시타빈","aes":["골수억제"]},
+    "Pemetrexed":{"alias":"페메트렉시드","aes":["피부발진","구역"]},
+    "Gefitinib":{"alias":"게피티닙","aes":["피부발진","설사"]},
+    "Osimertinib":{"alias":"오시머티닙","aes":["QT연장","심근"]},
+    "Alectinib":{"alias":"알렉티닙","aes":["근육통","변비"]},
+    "Bevacizumab":{"alias":"베바시주맙","aes":["출혈","고혈압"]},
+    "Pembrolizumab":{"alias":"펨브롤리주맙","aes":["면역관련 이상반응"]},
+    "Nivolumab":{"alias":"니볼루맙","aes":["면역관련 이상반응"]}
 }
-for k,v in list(ANTICANCER.items()):
-    v.setdefault("category","기타")
-
-ABX_GUIDE = {
-    "amoxicillin": {"class":"beta_lactam","alias":"아목사","notes":["발진","설사"]},
-    "amoxicillin/clavulanate":{"class":"beta_lactam","alias":"아목클","notes":["발진","설사","간기능 이상 드묾"]},
-    "ceftriaxone":{"class":"cephalosporin","alias":"세프트리악손","notes":["설사","과민반응"]},
-    "piperacillin/tazobactam":{"class":"beta_lactam","alias":"피펫/타조","notes":["설사","발진","나트륨부담"]},
-    "levofloxacin":{"class":"fluoroquinolone","alias":"레보플록사신","notes":["힘줄통증/파열 드묾","어지럼","광과민"]},
-    "ciprofloxacin":{"class":"fluoroquinolone","alias":"시프로","notes":["힘줄통증/파열 드묾","어지럼","광과민"]},
-    "azithromycin":{"class":"macrolide","alias":"아지스로마이신","notes":["위장관 증상","QT연장 소인 주의"]},
-    "vancomycin":{"class":"glycopeptide","alias":"반코마이신","notes":["주입반응","신장 부담"]},
+ABX_GUIDE={
+    "세팔로스포린":["과민반응","설사"],
+    "마크롤라이드":["CYP 상호작용","QT 연장"],
+    "퀴놀론":["QT 연장","건병증"]
 }
