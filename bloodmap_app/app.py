@@ -34,9 +34,9 @@ def main():
 st.markdown("### 🔗 공유하기")
 c1, c2, c3 = st.columns([1,1,2])
 with c1:
-    st.link_button("📱 카카오톡/메신저", "https://hdzwo5ginueir7hknzzfg4.streamlit.app/")
+    st.link_button(" 카카오톡/메신저", "https://hdzwo5ginueir7hknzzfg4.streamlit.app/")
 with c2:
-    st.link_button("📝 카페/블로그", "https://cafe.naver.com/bloodmap")
+    st.link_button(" 카페/블로그", "https://cafe.naver.com/bloodmap")
 with c3:
     st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
 
