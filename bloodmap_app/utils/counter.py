@@ -1,12 +1,23 @@
+
 import os, json
-_CNT_FILE='counter.json'
+
+_PATH = "visit_counter.json"
+
 def bump():
-    c=count()
-    with open(_CNT_FILE,'w',encoding='utf-8') as f:
-        json.dump({'n':c+1}, f)
+    data = {"count": 0}
+    if os.path.exists(_PATH):
+        try:
+            data = json.load(open(_PATH, "r"))
+        except Exception:
+            data = {"count": 0}
+    data["count"] = int(data.get("count", 0)) + 1
+    json.dump(data, open(_PATH, "w"))
+    return data["count"]
+
 def count():
-    try:
-        with open(_CNT_FILE,'r',encoding='utf-8') as f:
-            return json.load(f).get('n',0)
-    except Exception:
-        return 0
+    if os.path.exists(_PATH):
+        try:
+            return int(json.load(open(_PATH, "r")).get("count", 0))
+        except Exception:
+            return 0
+    return 0

@@ -1,24 +1,24 @@
+
 import streamlit as st
 
-def _parse_numeric(s, decimals=1):
-    if s is None or s=='':
+def _parse_numeric(raw, decimals=1):
+    if raw is None or raw == "":
         return None
     try:
-        v=float(str(s).strip())
-        return round(v, decimals) if decimals is not None else v
+        v = float(str(raw).strip())
+        if decimals is not None:
+            return round(v, decimals)
+        return v
     except Exception:
         return None
 
 def num_input_generic(label, key=None, decimals=1, placeholder="", as_int=False):
     raw = st.text_input(label, key=key, placeholder=placeholder)
-    v = _parse_numeric(raw, decimals=0 if as_int else decimals)
-    if as_int and v is not None:
-        try: return int(v)
-        except: return None
-    return v
+    val = _parse_numeric(raw, decimals=0 if as_int else decimals)
+    return val
 
-def entered(v):
+def entered(x):
     try:
-        return v is not None and str(v)!='' and float(v)!=0
+        return x is not None and str(x).strip() != "" and float(x) == float(x)
     except Exception:
         return False
