@@ -26,9 +26,11 @@ def main():
         HAS_PD = True
     except Exception:
         HAS_PD = False
-   def main():
+    def main():
     ...
     st.markdown(CAFE_LINK_MD)
+
+    # 🔗 공유하기 섹션 (반드시 main 안에 위치)
     st.markdown("### 🔗 공유하기")
     c1, c2, c3 = st.columns([1, 1, 2])
     with c1:
@@ -37,7 +39,16 @@ def main():
         st.link_button("📝 카페/블로그", "https://cafe.naver.com/bloodmap")
     with c3:
         st.code("https://hdzwo5ginueir7hknzzfg4.streamlit.app/", language="text")
-    ...
+
+    st.caption("✅ 모바일 줄꼬임 방지 · 별명 저장/그래프 · 암별/소아/희귀암 패널 ...")
+
+    os.makedirs("fonts", exist_ok=True)
+    from .utils import counter as _bm_counter
+    try:
+        _bm_counter.bump()
+        st.caption(f"👀 조회수(방문): {_bm_counter.count()}")
+    except Exception:
+        pass
 
 
 
