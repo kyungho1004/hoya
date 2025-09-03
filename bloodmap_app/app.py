@@ -1,15 +1,6 @@
-
 # -*- coding: utf-8 -*-
 import importlib, types, streamlit as st
 from pathlib import Path
-
-# Optional CSS
-css_path = Path(__file__).with_name("style.css")
-if css_path.exists():
-    try:
-        st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
-    except Exception:
-        pass
 
 def _call_if_exists(mod: types.ModuleType) -> bool:
     for fname in ("main", "app", "run"):
@@ -20,12 +11,17 @@ def _call_if_exists(mod: types.ModuleType) -> bool:
     return False
 
 def main():
-    # Prefer user's app module
+    # 1) strict relative import: bloodmap_app.app_user
     try:
-        user_mod = importlib.import_module("bloodmap.app_user")
-        if _call_if_exists(user_mod):
+        from . import app_user as user_mod
+    except Exception as e_rel:
+        # 2) module name fallback
+        try:
+            user_mod = importlib.import_module("bloodmap_app.app_user")
+        except Exception as e_abs:
+            st.warning(f"사용자 app 불러오기 오류: {e_abs}")
+            st.error("bloodmap_app.app_user 모듈을 찾지 못했습니다.")
             return
-    except Exception as e:
-        st.warning(f"사용자 app 불러오기 오류: {e}")
 
-    st.error("bloodmap.app_user 에 main/app/run 이 없습니다.")
+    if not _call_if_exists(user_mod):
+        st.error("bloodmap_app.app_user 에 main/app/run 이 없습니다.")
