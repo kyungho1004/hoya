@@ -1,4 +1,0 @@
-/* mobile-safe */
-.block-container{padding-top:8px}
-:root{--pad:10px}
-div[data-testid="stForm"]{padding:var(--pad)}
