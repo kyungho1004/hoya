@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-# 항암제(한글표기) — 대표 부작용 포함
+# 확장 라인업(항암제/항생제)
 ANTICANCER = {
-    # Alkylating agents
     "Cyclophosphamide": {"alias": "사이클로포스파마이드", "aes": ["출혈성 방광염", "골수억제"]},
     "Ifosfamide": {"alias": "이포스파마이드", "aes": ["신경독성", "방광염"]},
     "Melphalan": {"alias": "멜팔란", "aes": ["골수억제", "구내염"]},
     "Busulfan": {"alias": "부설판", "aes": ["폐독성", "경련"]},
     "Temozolomide": {"alias": "테모졸로마이드", "aes": ["골수억제", "오심/구토"]},
-    # Platinum
     "Cisplatin": {"alias": "시스플라틴", "aes": ["신독성", "이독성", "오심/구토"]},
     "Carboplatin": {"alias": "카보플라틴", "aes": ["골수억제"]},
     "Oxaliplatin": {"alias": "옥살리플라틴", "aes": ["말초신경병증", "한랭유발감각이상"]},
-    # Antimetabolites
     "5-FU": {"alias": "5-플루오로유라실", "aes": ["점막염", "설사", "수족증후군"]},
     "Capecitabine": {"alias": "카페시타빈", "aes": ["수족증후군", "설사"]},
     "Gemcitabine": {"alias": "젬시타빈", "aes": ["골수억제", "발열"]},
@@ -19,26 +16,21 @@ ANTICANCER = {
     "MTX": {"alias": "메토트렉세이트", "aes": ["간독성", "구내염", "신독성"]},
     "ARA-C": {"alias": "시타라빈", "aes": ["골수억제", "오심/구토", "발열"]},
     "Fludarabine": {"alias": "플루다라빈", "aes": ["면역억제", "감염"]},
-    # Topoisomerase inhibitors
     "Irinotecan": {"alias": "이리노테칸", "aes": ["설사(급성/지연)", "골수억제"]},
     "Topotecan": {"alias": "토포테칸", "aes": ["골수억제"]},
     "Etoposide": {"alias": "에토포사이드", "aes": ["골수억제", "저혈압"]},
-    # Anthracyclines
     "Doxorubicin": {"alias": "독소루비신", "aes": ["심독성", "탈모"]},
     "Daunorubicin": {"alias": "다우노루비신", "aes": ["심독성", "골수억제"]},
     "Epirubicin": {"alias": "에피루비신", "aes": ["심독성"]},
     "Idarubicin": {"alias": "이다루비신", "aes": ["심독성", "골수억제"]},
-    # Antimicrotubule
     "Paclitaxel": {"alias": "파클리탁셀", "aes": ["말초신경병증", "과민반응"]},
     "Docetaxel": {"alias": "도세탁셀", "aes": ["체액저류", "구강점막염"]},
     "Vincristine": {"alias": "빈크리스틴", "aes": ["신경병증", "변비"]},
     "Vinblastine": {"alias": "빈블라스틴", "aes": ["골수억제"]},
-    # Hormonal
     "Tamoxifen": {"alias": "타목시펜", "aes": ["혈전증", "자궁내막암 위험"]},
     "Letrozole": {"alias": "레트로졸", "aes": ["관절통", "골다공증"]},
     "Anastrozole": {"alias": "아나스트로졸", "aes": ["관절통", "골다공증"]},
     "Fulvestrant": {"alias": "풀베스트란트", "aes": ["주사부위통증"]},
-    # Targeted / TKI
     "Imatinib": {"alias": "이마티닙", "aes": ["부종", "피부발진"]},
     "Dasatinib": {"alias": "다사티닙", "aes": ["흉수", "혈소판감소"]},
     "Nilotinib": {"alias": "닐로티닙", "aes": ["QT연장", "고혈당"]},
@@ -56,7 +48,6 @@ ANTICANCER = {
     "Brigatinib": {"alias": "브리가티닙", "aes": ["폐독성 초기 증상"]},
     "Trametinib": {"alias": "트라메티닙", "aes": ["피부발진", "심기능저하"]},
     "Dabrafenib": {"alias": "다브라페닙", "aes": ["발열", "관절통"]},
-    # Antibodies / Immunotherapy
     "Trastuzumab": {"alias": "트라스투주맙", "aes": ["심기능저하"]},
     "Pertuzumab": {"alias": "퍼투주맙", "aes": ["설사", "피로"]},
     "Bevacizumab": {"alias": "베바시주맙", "aes": ["출혈", "고혈압", "창상치유지연"]},
@@ -70,7 +61,6 @@ ANTICANCER = {
     "Atezolizumab": {"alias": "아테졸리주맙", "aes": ["면역관련 이상반응"]},
     "Durvalumab": {"alias": "더발루맙", "aes": ["면역관련 이상반응"]},
     "Ipilimumab": {"alias": "이필리무맙", "aes": ["면역관련 대장염/간염"]},
-    # Differentiation / others
     "ATRA": {"alias": "비스트레티노인", "aes": ["분화증후군", "두통", "피부건조"]},
     "Arsenic trioxide": {"alias": "삼산화비소", "aes": ["QT연장", "분화증후군"]},
     "Hydroxyurea": {"alias": "하이드록시우레아", "aes": ["골수억제", "피부 변화"]},
@@ -80,7 +70,6 @@ ANTICANCER = {
     "Pomalidomide": {"alias": "포말리도마이드", "aes": ["혈전증", "골수억제"]},
 }
 
-# 항생제 라인업(계열) — 핵심 주의사항
 ABX_GUIDE = {
     "페니실린": ["과민반응", "설사"],
     "세팔로스포린": ["과민반응", "디설피람 유사 반응(일부)"],

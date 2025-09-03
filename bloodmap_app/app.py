@@ -13,7 +13,7 @@ def main():
     st.caption(MADE_BY)
     st.markdown(CAFE_LINK_MD)
 
-    # 별명 + PIN
+    # 별명 + PIN (중복 방지)
     c1, c2 = st.columns([2,1])
     with c1:
         nickname = st.text_input("별명(저장/그래프/스케줄용)", placeholder="예: 홍길동")
@@ -23,7 +23,7 @@ def main():
             st.warning("PIN은 숫자 4자리로 입력하세요.")
     key = nickname_key(nickname or "", pin or "")
 
-    # 1) 암 그룹 선택
+    # 1) 암 그룹
     st.divider()
     st.header("1️⃣ 암 그룹 및 특수검사")
     group = st.selectbox("암 그룹 선택", ["미선택/일반", "혈액암", "고형암", "소아암", "희귀암"])
@@ -47,7 +47,7 @@ def main():
             "간모세포종(Hepatoblastoma)","비인두암(NPC)","GIST"
         ])
 
-    # 2) 기본 수치
+    # 2) 기본 혈액 수치
     st.divider()
     st.header("2️⃣ 기본 혈액 검사 수치")
     vals = {}
@@ -59,7 +59,7 @@ def main():
         else:
             vals[name] = num_input(name, key=f"v_{name}", decimals=1, placeholder="예: 3.5")
 
-    # 3) 특수검사
+    # 3) 특수검사(암별)
     st.divider()
     st.header("3️⃣ 암별 디테일 수치(특수검사)")
     extra_vals = {}
@@ -94,7 +94,7 @@ def main():
     recommended = {
         "혈액암": ["ARA-C","Daunorubicin","Idarubicin","Cyclophosphamide","Etoposide","Fludarabine","Hydroxyurea","MTX","ATRA","G-CSF","Busulfan","Bortezomib","Lenalidomide"],
         "고형암": ["Cisplatin","Carboplatin","Oxaliplatin","Paclitaxel","Docetaxel","Gemcitabine","Pemetrexed","Bevacizumab","Pembrolizumab","Nivolumab","Doxorubicin","Ifosfamide","Pazopanib","Sorafenib","Lenvatinib"],
-        "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin","Cisplatin","Topotecan","Irinotecan","Trastuzumab(해당시)"],
+        "소아암": ["Cyclophosphamide","Ifosfamide","Doxorubicin","Vincristine","Etoposide","Carboplatin","Cisplatin","Topotecan","Irinotecan"],
         "희귀암": ["Imatinib","Sunitinib","Regorafenib","Mitotane","Temozolomide","Dabrafenib","Trametinib"],
     }.get(group, [])
     st.caption("추천 리스트(암종 기반) + 아래 '전체 라인업에서 추가' 로 원하는 약을 더 선택할 수 있어요.")

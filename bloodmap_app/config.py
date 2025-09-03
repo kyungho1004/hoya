@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-APP_TITLE = "🩸 피수치 가이드 v3.16"
+APP_TITLE = "🩸 피수치 가이드 v3.17"
 PAGE_TITLE = "피수치 가이드 / BloodMap"
 MADE_BY = "제작: Hoya/GPT · 자문: Hoya/GPT"
 CAFE_LINK_MD = "🔗 **피수치 가이드 공식카페**: https://cafe.naver.com/bloodmap"
