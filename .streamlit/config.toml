@@ -1,11 +1,11 @@
+[theme]
+primaryColor="#1f7aec"
+backgroundColor="#ffffff"
+secondaryBackgroundColor="#f5f7fb"
+textColor="#111111"
+font="sans serif"
 
 [server]
+enableCORS = true
+enableXsrfProtection = true
 headless = true
-port = 8501
-enableCORS = false
-
-[theme]
-primaryColor="#F63366"
-backgroundColor="#FFFFFF"
-secondaryBackgroundColor="#F0F2F6"
-textColor="#262730"
