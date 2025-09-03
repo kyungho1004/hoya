@@ -1,1 +1,2 @@
-# package marker for bloodmap
+# -*- coding: utf-8 -*-
+"""bloodmap package."""
