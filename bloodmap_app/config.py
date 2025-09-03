@@ -1,30 +1,22 @@
-\
-APP_TITLE = "🩸 피수치 가이드 (BloodMap) v3.20"
-PAGE_TITLE = "BloodMap v3.20"
-MADE_BY = "제작/자문: Hoya/GPT"
-CAFE_LINK_MD = "[피수치 가이드 공식 카페](https://cafe.naver.com/bloodmap)"
-FOOTER_CAFE = "피드백: 카페에 남겨주세요 · 문제가 발생하면 즉시 삭제 조치 · 개인정보는 절대 수집하지 않습니다."
-DISCLAIMER = "본 자료는 보호자의 이해를 돕기 위한 참고용이며, 모든 의학적 판단은 반드시 의료진의 진료와 상담을 따르세요."
-FEVER_GUIDE = """\
-- 38.0–38.5℃: 해열제/경과관찰
+
+APP_TITLE = "🩸 피수치 가이드 v3.14+ (PIN/특수검사 토글)"
+PAGE_TITLE = "피수치 가이드"
+MADE_BY = "제작: Hoya/GPT · 자문: Hoya/GPT"
+CAFE_LINK_MD = "[네이버 카페 바로가기](https://cafe.naver.com/bloodmap)"
+FOOTER_CAFE = "피수치 가이드 공식카페 · 보호자 울타리 프로젝트"
+DISCLAIMER = "본 자료는 보호자의 이해를 돕기 위한 참고용 정보이며, 모든 의학적 판단과 처치는 반드시 담당 의료진의 지시에 따르세요. 문제 발생 시 즉시 콘텐츠를 삭제하겠습니다. 개인정보는 절대 수집하지 않습니다."
+
+# 기본 순서 (병원 검사표 흐름)
+LBL_WBC="WBC(백혈구)"; LBL_Hb="Hb(혈색소)"; LBL_PLT="혈소판(PLT)"; LBL_ANC="호중구(ANC)"
+LBL_Ca="Ca"; LBL_P="P"; LBL_Na="Na"; LBL_K="K"; LBL_Alb="Albumin"; LBL_Glu="Glucose"
+LBL_TP="Total Protein"; LBL_AST="AST"; LBL_ALT="ALT"; LBL_LDH="LDH"; LBL_CRP="CRP"
+LBL_Cr="Creatinine"; LBL_UA="Uric Acid"; LBL_TB="Total Bilirubin"; LBL_BUN="BUN"; LBL_BNP="BNP"
+
+ORDER = [LBL_WBC,LBL_Hb,LBL_PLT,LBL_ANC,LBL_Ca,LBL_P,LBL_Na,LBL_K,LBL_Alb,LBL_Glu,LBL_TP,
+         LBL_AST,LBL_ALT,LBL_LDH,LBL_CRP,LBL_Cr,LBL_UA,LBL_TB,LBL_BUN,LBL_BNP]
+
+FEVER_GUIDE = """- 38.0~38.5℃: 해열제 복용 후 경과관찰
 - ≥38.5℃: 병원 연락 권고
-- ≥39.0℃: 즉시 병원 방문
-"""
+- ≥39.0℃: 즉시 병원 방문/응급실"""
 
-# 표시 라벨
-LBL_WBC="WBC(백혈구)"; LBL_Hb="Hb(혈색소)"; LBL_PLT="혈소판(PLT)"; LBL_ANC="ANC(호중구)"
-LBL_Ca="Ca(칼슘)"; LBL_P="P(인)"; LBL_Na="Na(나트륨)"; LBL_K="K(칼륨)"
-LBL_Alb="Albumin(알부민)"; LBL_Glu="Glucose(혈당)"; LBL_TP="Total Protein(총단백)"
-LBL_AST="AST"; LBL_ALT="ALT"; LBL_LDH="LDH"; LBL_CRP="CRP"; LBL_Cr="Creatinine(Cr)"
-LBL_UA="Uric Acid(UA)"; LBL_TB="Total Bilirubin(TB)"; LBL_BUN="BUN"; LBL_BNP="BNP"
-
-# 입력 순서
-ORDER = [
-    LBL_WBC, LBL_Hb, LBL_PLT, LBL_ANC,
-    LBL_Ca, LBL_P, LBL_Na, LBL_K, LBL_Alb,
-    LBL_Glu, LBL_TP, LBL_AST, LBL_ALT, LBL_LDH, LBL_CRP,
-    LBL_Cr, LBL_UA, LBL_TB, LBL_BUN, LBL_BNP
-]
-
-# 폰트 경로(옵션: reportlab 사용 시)
-FONT_PATH_REG = "fonts/NanumGothic.ttf"
+FONT_PATH_REG = "fonts/NanumGothic.ttf"  # 안내만; 동적 다운로드/설치 생략
