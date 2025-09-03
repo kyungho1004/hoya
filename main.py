@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generic entrypoint.
-Environments that look for "main.py" will import and run this file.
+Generic entrypoint for environments expecting main.py
 """
 from bloodmap_app.app import main
 

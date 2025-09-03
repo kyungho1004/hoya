@@ -1,43 +1,18 @@
-# BloodMap Entrypoints Fix Pack
+# BloodMap Full Fix Package
 
-This pack solves:
-- `ModuleNotFoundError: No module named 'bloodmap'`
-- Hosts that look for `main/app/run` or `main.py` automatically
+포함된 파일:
+- main.py
+- main/app/run.py
+- streamlit_app.py
+- bloodmap_app/ (실제 앱 코드 넣는 폴더)
+- config.py (placeholder)
+- fonts/ (PDF 폰트)
 
-## What it contains
-- `streamlit_app.py` → run with `streamlit run streamlit_app.py`
-- `main.py` → generic Python entrypoint
-- `main/app/run.py` → compatibility path for certain PaaS/hosts
-- `bloodmap_app/__init__.py` → ensures the package is importable
+사용법:
+1. bloodmap_app/ 폴더 안에 실제 app.py, utils/, data/ 등을 넣으세요.
+2. 로컬 실행: streamlit run streamlit_app.py
+3. 배포 호스트는 main.py 또는 main/app/run.py 자동 인식.
 
-## How to use
-1. Place this pack at your **project root** (same level as your `bloodmap_app/` folder).
-2. Make sure your real UI is defined at `bloodmap_app/app.py` with a `main()` function.
-3. Start locally:
-   ```bash
-   pip install -r requirements.txt
-   streamlit run streamlit_app.py
-   ```
-4. If your host expects `main.py` or `main/app/run.py`, these files will call `bloodmap_app.app.main()` for you.
-
-## Import path notes
-- Keep all internal imports **package-relative**, e.g. in `bloodmap_app/app.py`:
-  ```python
-  from .config import ...
-  from .utils.interpret import ...
-  ```
-  or absolute within the package:
-  ```python
-  from bloodmap_app.config import ...
-  ```
-- **Never** import `bloodmap.*` (old name) — that triggers `No module named 'bloodmap'`.
-
-## Troubleshooting
-- If you still see white screen on Streamlit Cloud, check app logs:
-  - Syntax errors (e.g., unmatched parentheses)
-  - Missing files (`config.py`, `data/*`, `utils/*`)
-  - `reportlab` not installed for PDF export (optional)
-
-## Footer policy banners (add in your UI footer)
-- "⚠️ 문제가 생길 경우 데이터는 삭제될 수 있습니다."
-- "🔒 개인정보는 절대 수집하지 않습니다."
+정책 문구:
+- ⚠️ 문제가 생길 경우 데이터는 삭제될 수 있습니다.
+- 🔒 개인정보는 절대 수집하지 않습니다.
