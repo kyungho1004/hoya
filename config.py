@@ -1,1 +1,1 @@
-# config placeholder
+# placeholder for root config (if ever needed)
