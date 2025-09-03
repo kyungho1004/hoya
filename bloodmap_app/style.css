@@ -1,6 +1,2 @@
-:root{--pad:8px}
-.block-container{padding-top:var(--pad);padding-bottom:var(--pad)}
-.small{font-size:.9rem;opacity:.9}
-h1,h2,h3{line-height:1.25}
-.stAlert{font-size:.95rem}
-.badge{display:inline-block;padding:.2rem .5rem;border-radius:.5rem;background:#eee;margin-right:.25rem}
+/* mobile-safe */
+.block-container{padding-top:8px}
