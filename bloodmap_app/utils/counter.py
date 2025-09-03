@@ -1,23 +1,22 @@
-\
+
 import os, json
-
-_COUNTER_PATH = "counter.json"
-
-def _read():
-    if not os.path.exists(_COUNTER_PATH):
-        return {"count": 0}
-    with open(_COUNTER_PATH, "r", encoding="utf-8") as f:
-        try: return json.load(f)
-        except: return {"count": 0}
-
-def _write(data):
-    with open(_COUNTER_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f)
-
+STATE = "/mnt/data/_bloodmap_counter.json"
 def bump():
-    d = _read()
-    d["count"] = int(d.get("count", 0)) + 1
-    _write(d)
+    try:
+        if os.path.exists(STATE):
+            j = json.load(open(STATE,"r"))
+        else:
+            j = {"count":0}
+        j["count"] += 1
+        json.dump(j, open(STATE,"w"))
+    except Exception:
+        pass
 
 def count():
-    return int(_read().get("count", 0))
+    try:
+        if os.path.exists(STATE):
+            j = json.load(open(STATE,"r"))
+            return j.get("count",0)
+    except Exception:
+        pass
+    return 1
