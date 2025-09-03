@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
-from bloodmap_app.app import main
+from bloodmap.app import main
 if __name__ == "__main__":
     main()
